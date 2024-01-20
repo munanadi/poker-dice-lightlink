@@ -15,4 +15,8 @@ This is a game of poker dice that is being played on chain.
 
 ---
 
+`make test` - to test contracts
+
+---
+
 > This is being built as a Proof of Concept for the Encode lightlink hackathon.
