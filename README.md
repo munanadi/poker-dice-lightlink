@@ -1,8 +1,18 @@
 ## Poker Dice
 
-This is a game of poker dice that is being played on chain. 
+This is a game of poker dice that is being played on chain.
 
 [Here's](https://www.youtube.com/watch?v=9InZ9eEnXzs) how you play it.
 
-> This is being built as a Proof of Concept for the Encode lightlink hackathon.
+---
 
+1. A player should be able to invoke the contract with the number of players.
+   - Add a min bet fee that is required.
+2. Any player should be able to join the game witht he contract address.
+3. Players make bet by sending in their amounts.
+4. Players will be able to roll their dice
+   - Players can select the dice they want to re-roll
+
+---
+
+> This is being built as a Proof of Concept for the Encode lightlink hackathon.
