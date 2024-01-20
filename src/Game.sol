@@ -12,17 +12,20 @@ import {console} from "forge-std/Console.sol";
 contract Game {
     //-------- Errors
     error GameAtCapacity();
-    error EntryFeeNotMet(uint256 _feeAmount);
-    error PlayerIndexNotExist(uint256 _playerIndex);
+    error EntryFeeNotMet(uint256 feeAmount);
+    error PlayerIndexNotExist(uint256 playerIndex);
 
     //-------- Events
     event GameStarted(uint256 indexed numberOfPlayers);
     event PlayerAdded(address indexed playerAddress);
+    event PlayerPlayedRound(uint256 indexed playerIndex);
 
     /**
      * These are 6 faces of a die denoted by integers.
      */
     enum Face {
+        // Discard the first value as deafult state
+        Discard,
         Ace,
         King,
         Queen,
@@ -56,6 +59,11 @@ contract Game {
         Finished
     }
 
+    enum PlayingState {
+        WaitingTurn,
+        DoneWithTurn
+    }
+
     /**
      * This is how a player would be represented in our game,
      * their name and the hand they have chosen
@@ -65,8 +73,10 @@ contract Game {
         uint256 index;
         // hand chosen in the current round
         uint256[] hand;
-        // bet placed
+        // bet amount
         uint256 bet;
+        // state player is in
+        PlayingState state;
     }
 
     // Number of max players in this game
@@ -76,7 +86,7 @@ contract Game {
     // State of the respective players in the game
     mapping(uint256 index => Player player) private playerState;
     // Game state
-    GameState public gameState;
+    GameState private s_gameState;
 
     // TODO: Remove this constant value for a dynamic entry fee later
     uint256 public constant ENTRY_FEE = 0.001 ether;
@@ -85,6 +95,8 @@ contract Game {
         // Setup the game
         s_totalNumberOfPlayers = _numberOfPlayers;
         emit GameStarted(s_totalNumberOfPlayers);
+
+        s_gameState = GameState.WaitingOnPlayersToJoin;
     }
 
     //-------- Functions
@@ -94,9 +106,7 @@ contract Game {
      */
     function joinGame(address _playerAddress) public payable {
         // Check if game is not full, else join.
-        uint256 currentCount = s_currentCountOfPlayers;
-
-        if (currentCount >= s_totalNumberOfPlayers) {
+        if (s_currentCountOfPlayers >= s_totalNumberOfPlayers) {
             revert GameAtCapacity();
         }
 
@@ -108,22 +118,80 @@ contract Game {
         // Add the player
         uint256[] memory startingHand = new uint256[](5);
 
-        Player memory newPlayer = Player({index: currentCount, hand: startingHand, bet: msg.value});
+        Player memory newPlayer = Player({
+            index: s_currentCountOfPlayers,
+            hand: startingHand,
+            bet: msg.value,
+            state: PlayingState.WaitingTurn
+        });
 
-        playerState[currentCount] = newPlayer;
+        playerState[s_currentCountOfPlayers] = newPlayer;
         s_currentCountOfPlayers += 1;
+
+        // Game state update, can start to play now
+        if (s_currentCountOfPlayers == s_totalNumberOfPlayers) {
+            s_gameState = GameState.WaitingOnPlayerTurn;
+        }
 
         emit PlayerAdded(_playerAddress);
     }
 
     /**
-     * @dev This is called to update a players roll (hand)
+     * @dev this function is called from the player, this will play a round lock in his hand, roll dice
+     * @param _playerIndex is the index of the player
+     * @param _indicesOfDice are the index of dice that are (re)rolled
+     */
+    function playRound(uint256 _playerIndex, uint256[] memory _indicesOfDice) external {
+        // This will be called after the palyer has locked his bets
+        // A player can choose not to re-roll any dice at a given point
+        uint256[] memory listOfRandomDice;
+
+        // It should call the _rollDice fn that will give new random values to the palyer
+        uint256 numberOfDiceToRoll = _indicesOfDice.length;
+        listOfRandomDice = _rollDice(numberOfDiceToRoll);
+
+        // Update the player state to DoneWithTurn
+        playerState[_playerIndex].state = PlayingState.DoneWithTurn;
+        uint256[] storage playersHand = playerState[_playerIndex].hand;
+
+        for (uint256 i = 0; i < numberOfDiceToRoll; i++) {
+            uint256 indexToChange = _indicesOfDice[i];
+            playersHand[indexToChange] = listOfRandomDice[i];
+        }
+
+        // Update the game state
+        _updateGameState();
+    }
+
+    /**
+     * @dev Internal function call that will update the game state
+     */
+    function _updateGameState() internal {
+        uint256 totalPlayersCount = s_totalNumberOfPlayers;
+
+        for (uint256 i = 0; i < totalPlayersCount; i++) {
+            if (playerState[i].state != PlayingState.DoneWithTurn) {
+                s_gameState = GameState.WaitingOnPlayerTurn;
+                break;
+            }
+        }
+    }
+
+    /**
+     * @dev Internal function call that procures the random numbers
      * @param _numberOfDiceToRoll is the number of dice to roll
      * @return listOfDice is the dice rolls
      */
-    function rollDice(uint256 _numberOfDiceToRoll) public returns (uint256[] memory listOfDice) {
-        // TODO: This is where the rolled dice will be returned.
-        // 3 should return 3 different random numbers between 0,6
+    function _rollDice(uint256 _numberOfDiceToRoll) internal view returns (uint256[] memory listOfDice) {
+        // TODO: Need to replace this with the actual random number generator.
+        uint256[] memory randomValues = new uint256[](_numberOfDiceToRoll);
+
+        for (uint256 i = 0; i < _numberOfDiceToRoll; i++) {
+            uint256 randomSeed = uint256(keccak256(abi.encodePacked(block.timestamp, i)));
+            randomValues[i] = randomSeed % 6;
+        }
+
+        return randomValues;
     }
 
     /**
@@ -157,6 +225,10 @@ contract Game {
             revert PlayerIndexNotExist(_playerIndex);
         }
         return playerState[_playerIndex].bet;
+    }
+
+    function getGameState() public view returns (GameState) {
+        return s_gameState;
     }
 
     function getTotalPrizePool() public view returns (uint256) {
