@@ -197,13 +197,23 @@ contract Game {
     ///  @dev this fn will pick the index of the player that won this round
     ///  @return winnderIndex is the index of the winner
     function pickWinner() external returns (uint256 winnerIndex) {
+        // Store all player ranks here
+        uint256[] memory playerRanks = new uint256[](s_totalNumberOfPlayers);
+
         // Loop through all the players and sort them on their hands
         for (uint256 i = 0; i < s_totalNumberOfPlayers; i++) {
             Player memory player = playerState[i];
 
             // evaluvate a players hand
             Rank finalRank = evaluvateHand(player.hand);
+            playerRanks[i] = uint256(finalRank);
         }
+
+        // Sort player ranks to find the winner, the one with max is the winner
+        playerRanks.sort();
+
+        // TODO: Returns max of one player, need to change this for ties
+        return playerRanks[playerRanks.length - 1];
     }
 
     /// @dev
