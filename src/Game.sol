@@ -4,12 +4,10 @@ pragma solidity ^0.8.18;
 import {console} from "forge-std/Console.sol";
 import {SortLib} from "./library/SortLib.sol";
 
-/**
- * @title Contract that represents a game of dice poker
- * @author Munanadi - Beginner
- * @notice Contract that will represent a game of dice poker on chain
- * @dev This will be the state of a contract rep all hands of the players
- */
+///  @title Contract that represents a game of dice poker
+///  @author Munanadi - Beginner
+///  @notice Contract that will represent a game of dice poker on chain
+///  @dev This will be the state of a contract rep all hands of the players
 contract Game {
     using SortLib for uint256[];
 
@@ -23,9 +21,7 @@ contract Game {
     event PlayerAdded(address indexed playerAddress);
     event PlayerPlayedRound(uint256 indexed playerIndex);
 
-    /**
-     * These are 6 faces of a die denoted by integers.
-     */
+    ///  These are 6 faces of a die denoted by integers.
     enum Face {
         // Discard the first value as deafult state
         Discard,
@@ -37,10 +33,8 @@ contract Game {
         Nine
     }
 
-    /**
-     * These are the ranks that a hand can have in the end,
-     * ordered from the highest to the lowest in points
-     */
+    ///  These are the ranks that a hand can have in the end,
+    ///  ordered from the highest to the lowest in points
     enum Ranks {
         FiveOfAKind,
         FourOfAKind,
@@ -52,9 +46,7 @@ contract Game {
         Bust
     }
 
-    /**
-     * This will represent the various game states
-     */
+    ///  This will represent the various game states
     enum GameState {
         WaitingOnPlayersToJoin,
         WaitingOnPlayerTurn,
@@ -67,28 +59,26 @@ contract Game {
         DoneWithTurn
     }
 
-    /**
-     * This is how a player would be represented in our game,
-     * their name and the hand they have chosen
-     */
+    ///  This is how a player would be represented in our game,
+    ///  their name and the hand they have chosen
     struct Player {
-        // index of the player
+        /// index of the player
         uint256 index;
-        // hand chosen in the current round
+        /// hand chosen in the current round
         uint256[] hand;
-        // bet amount
+        /// bet amount
         uint256 bet;
-        // state player is in
+        /// state player is in
         PlayingState state;
     }
 
-    // Number of max players in this game
+    /// Number of max players in this game
     uint256 private s_totalNumberOfPlayers;
-    // Number of players in this game currently
+    /// Number of players in this game currently
     uint256 private s_currentCountOfPlayers;
-    // State of the respective players in the game
+    /// State of the respective players in the game
     mapping(uint256 index => Player player) private playerState;
-    // Game state
+    /// Game state
     GameState private s_gameState;
 
     // TODO: Remove this constant value for a dynamic entry fee later
@@ -103,10 +93,9 @@ contract Game {
     }
 
     //-------- Functions
-    /**
-     * @dev This is called to join the game that was started
-     * @param _playerAddress is the address of the player that wants to join the game
-     */
+
+    ///  @dev This is called to join the game that was started
+    ///  @param _playerAddress is the address of the player that wants to join the game
     function joinGame(address _playerAddress) public payable {
         // Check if game is not full, else join.
         if (s_currentCountOfPlayers >= s_totalNumberOfPlayers) {
@@ -118,7 +107,7 @@ contract Game {
             revert EntryFeeNotMet(ENTRY_FEE);
         }
 
-        // Add the player
+        // Add the player, Everyone starts with a 0 (No cards on them)
         uint256[] memory startingHand = new uint256[](5);
 
         Player memory newPlayer = Player({
@@ -139,11 +128,9 @@ contract Game {
         emit PlayerAdded(_playerAddress);
     }
 
-    /**
-     * @dev this function is called from the player, this will play a round lock in his hand, roll dice
-     * @param _playerIndex is the index of the player
-     * @param _indicesOfDice are the index of dice that are (re)rolled
-     */
+    ///  @dev this function is called from the player, this will play a round lock in his hand, roll dice
+    ///  @param _playerIndex is the index of the player
+    ///  @param _indicesOfDice are the index of dice that are (re)rolled
     function playRound(uint256 _playerIndex, uint256[] memory _indicesOfDice) external {
         // This will be called after the palyer has locked his bets
         // A player can choose not to re-roll any dice at a given point
@@ -166,9 +153,7 @@ contract Game {
         _updateGameState();
     }
 
-    /**
-     * @dev Internal function call that will update the game state
-     */
+    ///  @dev Internal function call that will update the game state
     function _updateGameState() internal {
         uint256 totalPlayersCount = s_totalNumberOfPlayers;
 
@@ -180,11 +165,9 @@ contract Game {
         }
     }
 
-    /**
-     * @dev Internal function call that procures the random numbers
-     * @param _numberOfDiceToRoll is the number of dice to roll
-     * @return listOfDice is the dice rolls
-     */
+    ///  @dev Internal function call that procures the random numbers
+    ///  @param _numberOfDiceToRoll is the number of dice to roll
+    ///  @return listOfDice is the dice rolls
     function _rollDice(uint256 _numberOfDiceToRoll) internal view returns (uint256[] memory listOfDice) {
         // TODO: Need to replace this with the actual random number generator.
         uint256[] memory randomValues = new uint256[](_numberOfDiceToRoll);
@@ -197,12 +180,10 @@ contract Game {
         return randomValues;
     }
 
-    /**
-     * @dev this function will take index and delta in bet and udpate the player struct
-     * @param _playerIndex is the index of the player in the mapping
-     * @param _betDelta is the change in bet amount
-     * @param _toAdd is a bool representing to add or remove from bet
-     */
+    ///  @dev this function will take index and delta in bet and udpate the player struct
+    ///  @param _playerIndex is the index of the player in the mapping
+    ///  @param _betDelta is the change in bet amount
+    ///  @param _toAdd is a bool representing to add or remove from bet
     function changeBet(uint256 _playerIndex, uint256 _betDelta, bool _toAdd) public {
         Player storage currentPlayer = playerState[_playerIndex];
 
@@ -211,6 +192,77 @@ contract Game {
         } else {
             currentPlayer.bet -= _betDelta;
         }
+    }
+
+    ///  @dev this fn will pick the index of the player that won this round
+    ///  @return winnderIndex is the index of the winner
+    function pickWinner() external returns (uint256 winnerIndex) {
+        // Loop through all the players and sort them on their hands
+        for (uint256 i = 0; i < s_totalNumberOfPlayers; i++) {
+            Player memory player = playerState[i];
+
+            // evaluvate a players hand
+            Rank finalRank = evaluvateHand(player.hand);
+        }
+    }
+
+    /// @dev
+    function evaluvateHand(uint256[] memory hand) internal returns (Ranks) {
+        // sort the hand
+        hand.sort();
+
+        // Check for combinations
+        if (isFiveOfAKind) {
+            return Ranks.FiveOfAKind;
+        } else if (isFourOfAKind) {
+            return Ranks.FourOfAKind;
+        } else if (isFullHouse) {
+            return Ranks.FullHouse;
+        } else if (isStraight) {
+            return Ranks.Straight;
+        } else if (isThreeOfAKind) {
+            return Ranks.ThreeOfAKind;
+        } else if (isTwoPair) {
+            return Ranks.TwoPair;
+        } else if (isPair) {
+            return Ranks.Pair;
+        } else {
+            return Ranks.Bust;
+        }
+    }
+
+    function isFiveOfAKind(uint256[] memory hand) internal returns (bool) {
+        return hand[0] == hand[4];
+    }
+
+    function isFourOfAKind(uint256[] memory hand) internal returns (bool) {
+        return hand[0] == hand[3] || hand[1] == hand[4];
+    }
+
+    function isThreeOfAKind(uint256[] memory hand) internal returns (bool) {
+        return (hand[0] == hand[2]) || (hand[1] == hand[3]) || (hand[2] == hand[4]);
+    }
+
+    function isStraight(uint256[] memory hand) internal returns (bool) {
+        for (uint256 i = 0; i < 4; i++) {
+            if (hand[i] + 1 != hand[i + 1]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    function isFullHouse(uint256[] memory hand) internal returns (bool) {
+        return (hand[0] == hand[2] && hand[3] == hand[4]) || (hand[0] == hand[1] && hand[2] == hand[4]);
+    }
+
+    function isTwoPair(uint256[] memory hand) internal returns (bool) {
+        return (hand[0] == hand[1] && hand[2] == hand[3]) || (hand[0] == hand[1] && hand[3] == hand[4])
+            || (hand[1] == hand[2] && hand[3] == hand[4]);
+    }
+
+    function isPair(uint256[] memory hand) internal returns (bool) {
+        return (hand[0] == hand[1]) || (hand[1] == hand[2]) || (hand[2] == hand[3]) || (hand[3] == hand[4]);
     }
 
     //-------- Getters
