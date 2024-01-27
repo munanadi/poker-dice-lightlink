@@ -3,6 +3,7 @@ pragma solidity ^0.8.18;
 
 import {Test, console} from "forge-std/Test.sol";
 import {Game} from "../src/Game.sol";
+import {SortLib} from "../src/library/SortLib.sol";
 
 uint256 constant NUMBER_OF_PLAYERS = 5;
 uint256 constant NUMBER_OF_DICE_ROLLS = 5;
@@ -34,5 +35,19 @@ contract GameTest is Test {
             assertLt(returnData[i], 6);
             assertGe(returnData[i], 0);
         }
+    }
+
+    // Testing SortLib
+    using SortLib for uint256[];
+
+    function test_sortLibForArr() public {
+        uint256[] memory array = new uint256[](3);
+        array[0] = 100;
+        array[1] = 1000;
+        array[2] = 10;
+        array.sort();
+        assertEq(array[0], 10);
+        assertEq(array[1], 100);
+        assertEq(array[2], 1000);
     }
 }

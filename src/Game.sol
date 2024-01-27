@@ -2,6 +2,7 @@
 pragma solidity ^0.8.18;
 
 import {console} from "forge-std/Console.sol";
+import {SortLib} from "./library/SortLib.sol";
 
 /**
  * @title Contract that represents a game of dice poker
@@ -10,6 +11,8 @@ import {console} from "forge-std/Console.sol";
  * @dev This will be the state of a contract rep all hands of the players
  */
 contract Game {
+    using SortLib for uint256[];
+
     //-------- Errors
     error GameAtCapacity();
     error EntryFeeNotMet(uint256 feeAmount);
