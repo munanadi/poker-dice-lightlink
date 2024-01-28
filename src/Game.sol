@@ -51,7 +51,7 @@ contract Game {
         WaitingOnPlayersToJoin,
         WaitingOnPlayerTurn,
         Started,
-        Finished
+        FinishedRound
     }
 
     enum PlayingState {
@@ -163,6 +163,8 @@ contract Game {
                 break;
             }
         }
+
+        s_gameState = GameState.FinishedRound;
     }
 
     ///  @dev Internal function call that procures the random numbers
@@ -197,6 +199,10 @@ contract Game {
     ///  @dev this fn will pick the index of the player that won this round
     ///  @return winnderIndex is the index of the winner
     function pickWinner() external returns (uint256 winnerIndex) {
+        if (s_gameState == GameState.WaitingOnPlayerTurn) {
+            revert("not all players have played their turn");
+        }
+
         // Store all player ranks here
         uint256[] memory playerRanks = new uint256[](s_totalNumberOfPlayers);
 
