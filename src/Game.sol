@@ -54,11 +54,6 @@ contract Game {
         FinishedRound
     }
 
-    enum PlayingState {
-        WaitingTurn,
-        DoneWithTurn
-    }
-
     ///  This is how a player would be represented in our game,
     ///  their name and the hand they have chosen
     struct Player {
@@ -68,8 +63,6 @@ contract Game {
         uint256[] hand;
         /// bet amount
         uint256 bet;
-        /// state player is in
-        PlayingState state;
         /// turn player played
         uint256 turn;
     }
@@ -111,18 +104,12 @@ contract Game {
             revert EntryFeeNotMet(ENTRY_FEE);
         }
 
-        s_totalBets += ENTRY_FEE;
+        s_totalBets += msg.value;
 
         // Add the player, Everyone starts with a 0 (No cards on them)
         uint256[] memory startingHand = new uint256[](5);
 
-        Player memory newPlayer = Player({
-            index: s_currentCountOfPlayers,
-            hand: startingHand,
-            bet: msg.value,
-            state: PlayingState.WaitingTurn,
-            turn: 0
-        });
+        Player memory newPlayer = Player({index: s_currentCountOfPlayers, hand: startingHand, bet: msg.value, turn: 0});
 
         playerState[s_currentCountOfPlayers] = newPlayer;
         s_currentCountOfPlayers += 1;
@@ -140,7 +127,7 @@ contract Game {
     ///  @param _indicesOfDice are the index of dice that are (re)rolled
     function playRound(uint256 _playerIndex, uint256[] memory _indicesOfDice) external {
         // A player gets no more than two turns
-        if (playerState[_playerIndex].turn >= 1) {
+        if (playerState[_playerIndex].turn >= 2) {
             revert("player has exhausted turns");
         }
 
@@ -153,7 +140,7 @@ contract Game {
         listOfRandomDice = _rollDice(numberOfDiceToRoll);
 
         // Update the player state to DoneWithTurn
-        playerState[_playerIndex].state = PlayingState.DoneWithTurn;
+        playerState[_playerIndex].turn += 1;
         uint256[] storage playersHand = playerState[_playerIndex].hand;
 
         for (uint256 i = 0; i < numberOfDiceToRoll; i++) {
@@ -161,19 +148,17 @@ contract Game {
             playersHand[indexToChange] = listOfRandomDice[i];
         }
 
-        // Count this as player's turn
-        playerState[_playerIndex].turn += 1;
-
         // Update the game state
         _updateGameState();
     }
 
-    ///  @dev Internal function call that will update the game state
+    ///  @dev Internal function call that will update the game state based on the number
+    /// turns taken by the player
     function _updateGameState() internal {
         uint256 totalPlayersCount = s_totalNumberOfPlayers;
 
         for (uint256 i = 0; i < totalPlayersCount; i++) {
-            if (playerState[i].state != PlayingState.DoneWithTurn) {
+            if (playerState[i].turn >= 2) {
                 s_gameState = GameState.WaitingOnPlayerTurn;
                 break;
             }
@@ -201,6 +186,8 @@ contract Game {
     ///  @param _playerIndex is the index of the player in the mapping
     ///  @param _toAdd is a bool representing to add or remove from bet
     function changeBet(uint256 _playerIndex, bool _toAdd) public payable {
+        // TODO: Cannnot remove balance if no bet placed.
+
         Player storage currentPlayer = playerState[_playerIndex];
 
         if (_toAdd) {
@@ -240,7 +227,7 @@ contract Game {
         return playerRanks[playerRanks.length - 1];
     }
 
-    /// @dev
+    /// @dev this function goes through a hand and returns the rank of that particular hand
     function evaluvateHand(uint256[] memory hand) internal returns (Ranks) {
         // sort the hand
         hand.sort();
