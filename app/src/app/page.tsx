@@ -12,7 +12,7 @@ import { WagmiConfig, configureChains, createConfig, Chain } from "wagmi";
 import { publicProvider } from "wagmi/providers/public";
 import First from "@/components/First";
 
-export default function Home({ props }: any) {
+export default function Home() {
   const [isMounted, setIsMounted] = useState(false);
   const [wagmiConfig, setWagmiConfig] = useState<any | null>(null);
   const [chains, setChains] = useState<any | null>(null);
