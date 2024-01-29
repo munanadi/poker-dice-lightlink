@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.18;
+pragma solidity ^0.8.9;
 
 import {console} from "forge-std/Console.sol";
 import {SortLib} from "./library/SortLib.sol";
+import {RrpRequesterV0} from "@api3/airnode-protocol/contracts/rrp/requesters/RrpRequesterV0.sol";
 
 ///  @title Contract that represents a game of dice poker
 ///  @author Munanadi - Beginner
 ///  @notice Contract that will represent a game of dice poker on chain
 ///  @dev This will be the state of a contract rep all hands of the players
-contract Game {
+contract Game is RrpRequesterV0 {
     using SortLib for uint256[];
 
     //-------- Errors
@@ -72,7 +73,7 @@ contract Game {
     /// Number of players in this game currently
     uint256 private s_currentCountOfPlayers;
     /// State of the respective players in the game
-    mapping(uint256 index => Player player) private playerState;
+    mapping(uint256 => Player) private playerState;
     /// Game state
     GameState private s_gameState;
     /// Total value of bets
@@ -81,7 +82,7 @@ contract Game {
     // TODO: Remove this constant value for a dynamic entry fee later
     uint256 public constant ENTRY_FEE = 0.001 ether;
 
-    constructor(uint256 _numberOfPlayers) {
+    constructor(uint256 _numberOfPlayers, address airNodeAddress) RrpRequesterV0(airNodeAddress) {
         // Setup the game
         s_totalNumberOfPlayers = _numberOfPlayers;
         emit GameStarted(s_totalNumberOfPlayers);
