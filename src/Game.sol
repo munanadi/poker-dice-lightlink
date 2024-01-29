@@ -3,13 +3,13 @@ pragma solidity ^0.8.9;
 
 import {console} from "forge-std/Console.sol";
 import {SortLib} from "./library/SortLib.sol";
-import {RrpRequesterV0} from "@api3/airnode-protocol/contracts/rrp/requesters/RrpRequesterV0.sol";
+import {Qrng} from "./Qrng.sol";
 
 ///  @title Contract that represents a game of dice poker
 ///  @author Munanadi - Beginner
 ///  @notice Contract that will represent a game of dice poker on chain
 ///  @dev This will be the state of a contract rep all hands of the players
-contract Game is RrpRequesterV0 {
+contract Game is Qrng {
     using SortLib for uint256[];
 
     //-------- Errors
@@ -79,18 +79,21 @@ contract Game is RrpRequesterV0 {
     /// Total value of bets
     uint256 s_totalBets;
 
+    /// Random Number
+    Qrng private qrng;
+
     // TODO: Remove this constant value for a dynamic entry fee later
     uint256 public constant ENTRY_FEE = 0.001 ether;
 
-    constructor(uint256 _numberOfPlayers, address airNodeAddress) RrpRequesterV0(airNodeAddress) {
+    constructor(uint256 _numberOfPlayers, address airnodeRrpAddr) Qrng(airnodeRrpAddr) {
         // Setup the game
         s_totalNumberOfPlayers = _numberOfPlayers;
         emit GameStarted(s_totalNumberOfPlayers);
 
         s_gameState = GameState.WaitingOnPlayersToJoin;
-    }
 
-    //-------- Functions
+        qrng = new Qrng(airnodeRrpAddr);
+    }
 
     ///  @dev This is called to join the game that was started
     ///  @param _playerAddress is the address of the player that wants to join the game
