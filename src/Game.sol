@@ -70,6 +70,8 @@ contract Game {
         uint256 bet;
         /// state player is in
         PlayingState state;
+        /// turn player played
+        uint256 turn;
     }
 
     /// Number of max players in this game
@@ -80,6 +82,8 @@ contract Game {
     mapping(uint256 index => Player player) private playerState;
     /// Game state
     GameState private s_gameState;
+    /// Total value of bets
+    uint256 s_totalBets;
 
     // TODO: Remove this constant value for a dynamic entry fee later
     uint256 public constant ENTRY_FEE = 0.001 ether;
@@ -107,6 +111,8 @@ contract Game {
             revert EntryFeeNotMet(ENTRY_FEE);
         }
 
+        s_totalBets += ENTRY_FEE;
+
         // Add the player, Everyone starts with a 0 (No cards on them)
         uint256[] memory startingHand = new uint256[](5);
 
@@ -114,7 +120,8 @@ contract Game {
             index: s_currentCountOfPlayers,
             hand: startingHand,
             bet: msg.value,
-            state: PlayingState.WaitingTurn
+            state: PlayingState.WaitingTurn,
+            turn: 0
         });
 
         playerState[s_currentCountOfPlayers] = newPlayer;
@@ -132,6 +139,11 @@ contract Game {
     ///  @param _playerIndex is the index of the player
     ///  @param _indicesOfDice are the index of dice that are (re)rolled
     function playRound(uint256 _playerIndex, uint256[] memory _indicesOfDice) external {
+        // A player gets no more than two turns
+        if (playerState[_playerIndex].turn >= 1) {
+            revert("player has exhausted turns");
+        }
+
         // This will be called after the palyer has locked his bets
         // A player can choose not to re-roll any dice at a given point
         uint256[] memory listOfRandomDice;
@@ -148,6 +160,9 @@ contract Game {
             uint256 indexToChange = _indicesOfDice[i];
             playersHand[indexToChange] = listOfRandomDice[i];
         }
+
+        // Count this as player's turn
+        playerState[_playerIndex].turn += 1;
 
         // Update the game state
         _updateGameState();
@@ -182,23 +197,26 @@ contract Game {
         return randomValues;
     }
 
-    ///  @dev this function will take index and delta in bet and udpate the player struct
+    ///  @dev this function will take index and either to add or reduce the amount from their bets
     ///  @param _playerIndex is the index of the player in the mapping
-    ///  @param _betDelta is the change in bet amount
     ///  @param _toAdd is a bool representing to add or remove from bet
-    function changeBet(uint256 _playerIndex, uint256 _betDelta, bool _toAdd) public {
+    function changeBet(uint256 _playerIndex, bool _toAdd) public payable {
         Player storage currentPlayer = playerState[_playerIndex];
 
         if (_toAdd) {
-            currentPlayer.bet += _betDelta;
+            currentPlayer.bet += msg.value;
+            s_totalBets += msg.value;
         } else {
-            currentPlayer.bet -= _betDelta;
+            currentPlayer.bet -= msg.value;
+            s_totalBets -= msg.value;
         }
+
+        // Add the bet amount to the contract.
     }
 
     ///  @dev this fn will pick the index of the player that won this round
-    ///  @return winnderIndex is the index of the winner
-    function pickWinner() external returns (uint256 winnerIndex) {
+    ///  @return uint256 winnderIndex is the index of the winner
+    function pickWinner() external returns (uint256) {
         if (s_gameState == GameState.WaitingOnPlayerTurn) {
             revert("not all players have played their turn");
         }
@@ -211,7 +229,7 @@ contract Game {
             Player memory player = playerState[i];
 
             // evaluvate a players hand
-            Rank finalRank = evaluvateHand(player.hand);
+            Ranks finalRank = evaluvateHand(player.hand);
             playerRanks[i] = uint256(finalRank);
         }
 
@@ -228,38 +246,38 @@ contract Game {
         hand.sort();
 
         // Check for combinations
-        if (isFiveOfAKind) {
+        if (isFiveOfAKind(hand)) {
             return Ranks.FiveOfAKind;
-        } else if (isFourOfAKind) {
+        } else if (isFourOfAKind(hand)) {
             return Ranks.FourOfAKind;
-        } else if (isFullHouse) {
+        } else if (isFullHouse(hand)) {
             return Ranks.FullHouse;
-        } else if (isStraight) {
+        } else if (isStraight(hand)) {
             return Ranks.Straight;
-        } else if (isThreeOfAKind) {
+        } else if (isThreeOfAKind(hand)) {
             return Ranks.ThreeOfAKind;
-        } else if (isTwoPair) {
+        } else if (isTwoPair(hand)) {
             return Ranks.TwoPair;
-        } else if (isPair) {
+        } else if (isPair(hand)) {
             return Ranks.Pair;
         } else {
             return Ranks.Bust;
         }
     }
 
-    function isFiveOfAKind(uint256[] memory hand) internal returns (bool) {
+    function isFiveOfAKind(uint256[] memory hand) internal pure returns (bool) {
         return hand[0] == hand[4];
     }
 
-    function isFourOfAKind(uint256[] memory hand) internal returns (bool) {
+    function isFourOfAKind(uint256[] memory hand) internal pure returns (bool) {
         return hand[0] == hand[3] || hand[1] == hand[4];
     }
 
-    function isThreeOfAKind(uint256[] memory hand) internal returns (bool) {
+    function isThreeOfAKind(uint256[] memory hand) internal pure returns (bool) {
         return (hand[0] == hand[2]) || (hand[1] == hand[3]) || (hand[2] == hand[4]);
     }
 
-    function isStraight(uint256[] memory hand) internal returns (bool) {
+    function isStraight(uint256[] memory hand) internal pure returns (bool) {
         for (uint256 i = 0; i < 4; i++) {
             if (hand[i] + 1 != hand[i + 1]) {
                 return false;
@@ -268,16 +286,16 @@ contract Game {
         return true;
     }
 
-    function isFullHouse(uint256[] memory hand) internal returns (bool) {
+    function isFullHouse(uint256[] memory hand) internal pure returns (bool) {
         return (hand[0] == hand[2] && hand[3] == hand[4]) || (hand[0] == hand[1] && hand[2] == hand[4]);
     }
 
-    function isTwoPair(uint256[] memory hand) internal returns (bool) {
+    function isTwoPair(uint256[] memory hand) internal pure returns (bool) {
         return (hand[0] == hand[1] && hand[2] == hand[3]) || (hand[0] == hand[1] && hand[3] == hand[4])
             || (hand[1] == hand[2] && hand[3] == hand[4]);
     }
 
-    function isPair(uint256[] memory hand) internal returns (bool) {
+    function isPair(uint256[] memory hand) internal pure returns (bool) {
         return (hand[0] == hand[1]) || (hand[1] == hand[2]) || (hand[2] == hand[3]) || (hand[3] == hand[4]);
     }
 
@@ -303,13 +321,6 @@ contract Game {
     }
 
     function getTotalPrizePool() public view returns (uint256) {
-        uint256 totalPrizePool;
-        uint256 totalPlayersCount = s_totalNumberOfPlayers;
-
-        for (uint256 i = 0; i < totalPlayersCount; i++) {
-            totalPrizePool += playerState[i].bet;
-        }
-
-        return totalPrizePool;
+        return s_totalBets;
     }
 }
