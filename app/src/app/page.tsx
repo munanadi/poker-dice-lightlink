@@ -1,3 +1,5 @@
+"use client";
+import { useEffect, useState } from "react";
 import { rainbowkitUseMoonConnector } from "@moonup/moon-rainbowkit";
 import { AUTH, MOON_SESSION_KEY, Storage } from "@moonup/moon-types";
 import {
@@ -6,24 +8,11 @@ import {
   getDefaultWallets,
 } from "@rainbow-me/rainbowkit";
 import "@rainbow-me/rainbowkit/styles.css";
-import type { AppProps } from "next/app";
-import { useEffect, useState } from "react";
 import { WagmiConfig, configureChains, createConfig, Chain } from "wagmi";
-import {
-  arbitrum,
-  base,
-  goerli,
-  mainnet,
-  optimism,
-  polygon,
-  polygonMumbai,
-} from "wagmi/chains";
 import { publicProvider } from "wagmi/providers/public";
-import "../styles/globals.css";
-import { writeContract } from "viem/_types/actions/wallet/writeContract";
-import { addChain } from "viem/_types/actions/wallet/addChain";
+import First from "@/components/First";
 
-function MyApp({ Component, pageProps }: AppProps) {
+export default function Home({ props }: any) {
   const [isMounted, setIsMounted] = useState(false);
   const [wagmiConfig, setWagmiConfig] = useState<any | null>(null);
   const [chains, setChains] = useState<any | null>(null);
@@ -109,10 +98,8 @@ function MyApp({ Component, pageProps }: AppProps) {
   return (
     <WagmiConfig config={wagmiConfig}>
       <RainbowKitProvider chains={chains}>
-        <Component {...pageProps} />
+        <First />
       </RainbowKitProvider>
     </WagmiConfig>
   );
 }
-
-export default MyApp;
