@@ -16,7 +16,7 @@ export function MainNav() {
       </Link>
       <nav className="flex items-center gap-6 text-sm">
         <Link
-          href="/docs"
+          href="/start-game"
           className={cn(
             "transition-colors hover:text-foreground/80",
             pathname === "/docs" ? "text-foreground" : "text-foreground/60",
@@ -25,7 +25,25 @@ export function MainNav() {
           Start a Game
         </Link>
         <Link
-          href="/docs/components"
+          href="/roll-dice"
+          className={cn(
+            "transition-colors hover:text-foreground/80",
+            pathname === "/docs" ? "text-foreground" : "text-foreground/60",
+          )}
+        >
+          Roll dice
+        </Link>
+        <Link
+          href="/player-screen"
+          className={cn(
+            "transition-colors hover:text-foreground/80",
+            pathname === "/docs" ? "text-foreground" : "text-foreground/60",
+          )}
+        >
+          Player Screen
+        </Link>
+        <Link
+          href="/join-game"
           className={cn(
             "transition-colors hover:text-foreground/80",
             pathname?.startsWith("/docs/components")
