@@ -16,10 +16,11 @@ contract Game is Qrng {
     error GameAtCapacity();
     error EntryFeeNotMet(uint256 feeAmount);
     error PlayerIndexNotExist(uint256 playerIndex);
+    error NotAuthorized();
 
     //-------- Events
     event GameStarted(uint256 indexed numberOfPlayers);
-    event PlayerAdded(address indexed playerAddress);
+    event PlayerAdded(address indexed playerAddress, uint256 indexed playerIndex);
     event PlayerPlayedRound(uint256 indexed playerIndex);
 
     ///  These are 6 faces of a die denoted by integers.
@@ -60,6 +61,8 @@ contract Game is Qrng {
     struct Player {
         /// index of the player
         uint256 index;
+        /// address of the player
+        address playerAddr;
         /// hand chosen in the current round
         uint256[] hand;
         /// bet amount
@@ -96,8 +99,8 @@ contract Game is Qrng {
     }
 
     ///  @dev This is called to join the game that was started
-    ///  @param _playerAddress is the address of the player that wants to join the game
-    function joinGame(address _playerAddress) public payable {
+    ///  @notice The player wanting to join will will call this function
+    function joinGame() public payable {
         // Check if game is not full, else join.
         if (s_currentCountOfPlayers >= s_totalNumberOfPlayers) {
             revert GameAtCapacity();
@@ -113,7 +116,15 @@ contract Game is Qrng {
         // Add the player, Everyone starts with a 0 (No cards on them)
         uint256[] memory startingHand = new uint256[](5);
 
-        Player memory newPlayer = Player({index: s_currentCountOfPlayers, hand: startingHand, bet: msg.value, turn: 0});
+        Player memory newPlayer = Player({
+            index: s_currentCountOfPlayers,
+            playerAddr: msg.sender,
+            hand: startingHand,
+            bet: msg.value,
+            turn: 0
+        });
+
+        emit PlayerAdded(msg.sender, s_currentCountOfPlayers);
 
         playerState[s_currentCountOfPlayers] = newPlayer;
         s_currentCountOfPlayers += 1;
@@ -122,14 +133,17 @@ contract Game is Qrng {
         if (s_currentCountOfPlayers == s_totalNumberOfPlayers) {
             s_gameState = GameState.WaitingOnPlayerTurn;
         }
-
-        emit PlayerAdded(_playerAddress);
     }
 
     ///  @dev this function is called from the player, this will play a round lock in his hand, roll dice
     ///  @param _playerIndex is the index of the player
     ///  @param _indicesOfDice are the index of dice that are (re)rolled
     function playRound(uint256 _playerIndex, uint256[] memory _indicesOfDice) external {
+        // Player playing his own turn?
+        if (playerState[_playerIndex].playerAddr != msg.sender) {
+            revert NotAuthorized();
+        }
+
         // A player gets no more than two turns
         if (playerState[_playerIndex].turn >= 2) {
             revert("player has exhausted turns");
