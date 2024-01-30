@@ -11,6 +11,9 @@ import "@rainbow-me/rainbowkit/styles.css";
 import { WagmiConfig, configureChains, createConfig, Chain } from "wagmi";
 import { publicProvider } from "wagmi/providers/public";
 import First from "@/components/First";
+import { polygonMumbai } from "viem/chains";
+import NavBar from "@/components/NavBar";
+import { SiteFooter } from "@/components/Footer";
 
 export default function Home() {
   const [isMounted, setIsMounted] = useState(false);
@@ -45,6 +48,7 @@ export default function Home() {
     const { chains, publicClient } = configureChains(
       [
         pegasus,
+        polygonMumbai,
         ...(process.env.NEXT_PUBLIC_ENABLE_TESTNETS === "true" ? [] : []),
       ],
       [publicProvider()],
@@ -98,7 +102,9 @@ export default function Home() {
   return (
     <WagmiConfig config={wagmiConfig}>
       <RainbowKitProvider chains={chains}>
+        <NavBar />
         <First />
+        <SiteFooter />
       </RainbowKitProvider>
     </WagmiConfig>
   );
