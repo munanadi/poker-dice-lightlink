@@ -2,14 +2,123 @@
 pragma solidity ^0.8.9;
 
 import {console} from "forge-std/Console.sol";
+import {RrpRequesterV0} from "@api3/airnode-protocol/contracts/rrp/requesters/RrpRequesterV0.sol";
 import {SortLib} from "./library/SortLib.sol";
-import {Qrng} from "./Qrng.sol";
 
 ///  @title Contract that represents a game of dice poker
 ///  @author Munanadi - Beginner
 ///  @notice Contract that will represent a game of dice poker on chain
 ///  @dev This will be the state of a contract rep all hands of the players
-contract Game is Qrng {
+contract Game is RrpRequesterV0 {
+    //// RANDOM API3
+    event RequestedUint256(bytes32 indexed requestId);
+    event ReceivedUint256(bytes32 indexed requestId, uint256 response);
+    event RequestedUint256Array(bytes32 indexed requestId, uint256 size);
+    event ReceivedUint256Array(bytes32 indexed requestId, uint256[] response);
+    event WithdrawalRequested(address indexed airnode, address indexed sponsorWallet);
+
+    /// The address of the QRNG Airnode
+    address public airnode;
+    /// The endpoint ID for requesting a single random number
+    bytes32 public endpointIdUint256;
+    /// The endpoint ID for requesting an array of random numbers
+    bytes32 public endpointIdUint256Array;
+    /// The wallet that will cover the gas costs of the request
+    address public sponsorWallet;
+    /// The random number returned by the QRNG Airnode
+    uint256 public _qrngUint256;
+    /// The array of random numbers returned by the QRNG Airnode
+    uint256[] public _qrngUint256Array;
+
+    mapping(bytes32 => bool) public expectingRequestWithIdToBeFulfilled;
+
+    /// @notice Sets the parameters for making requests
+    function setRequestParameters(
+        address _airnode,
+        bytes32 _endpointIdUint256,
+        bytes32 _endpointIdUint256Array,
+        address _sponsorWallet
+    ) external {
+        airnode = _airnode;
+        endpointIdUint256 = _endpointIdUint256;
+        endpointIdUint256Array = _endpointIdUint256Array;
+        sponsorWallet = _sponsorWallet;
+    }
+
+    /// @notice To receive funds from the sponsor wallet and send them to the owner.
+    receive() external payable {
+        payable(msg.sender).transfer(msg.value);
+        emit WithdrawalRequested(airnode, sponsorWallet);
+    }
+
+    /// @notice Requests a `uint256`
+    /// @dev This request will be fulfilled by the contract's sponsor wallet,
+    /// which means spamming it may drain the sponsor wallet.
+    function makeRequestUint256() external returns (bytes32) {
+        bytes32 requestId = airnodeRrp.makeFullRequest(
+            airnode, endpointIdUint256, address(this), sponsorWallet, address(this), this.fulfillUint256.selector, ""
+        );
+        expectingRequestWithIdToBeFulfilled[requestId] = true;
+        emit RequestedUint256(requestId);
+        return requestId;
+    }
+
+    /// @notice Called by the Airnode through the AirnodeRrp contract to
+    /// fulfill the request
+    function fulfillUint256(bytes32 requestId, bytes calldata data) external onlyAirnodeRrp {
+        require(expectingRequestWithIdToBeFulfilled[requestId], "Request ID not known");
+        expectingRequestWithIdToBeFulfilled[requestId] = false;
+        uint256 qrngUint256 = abi.decode(data, (uint256));
+        _qrngUint256 = qrngUint256;
+        // Do what you want with `qrngUint256` here...
+        emit ReceivedUint256(requestId, qrngUint256);
+    }
+
+    /// @notice Requests a `uint256[]`
+    /// @param size Size of the requested array
+    function makeRequestUint256Array(uint256 size) external returns (bytes32) {
+        bytes32 requestId = airnodeRrp.makeFullRequest(
+            airnode,
+            endpointIdUint256Array,
+            address(this),
+            sponsorWallet,
+            address(this),
+            this.fulfillUint256Array.selector,
+            // Using Airnode ABI to encode the parameters
+            abi.encode(bytes32("1u"), bytes32("size"), size)
+        );
+        expectingRequestWithIdToBeFulfilled[requestId] = true;
+        emit RequestedUint256Array(requestId, size);
+        return requestId;
+    }
+
+    /// @notice Called by the Airnode through the AirnodeRrp contract to
+    /// fulfill the request
+    function fulfillUint256Array(bytes32 requestId, bytes calldata data) external onlyAirnodeRrp {
+        require(expectingRequestWithIdToBeFulfilled[requestId], "Request ID not known");
+        expectingRequestWithIdToBeFulfilled[requestId] = false;
+        uint256[] memory qrngUint256Array = abi.decode(data, (uint256[]));
+        // Do what you want with `qrngUint256Array` here...
+        _qrngUint256Array = qrngUint256Array;
+        emit ReceivedUint256Array(requestId, qrngUint256Array);
+    }
+
+    /// @notice Getter functions to check the returned value.
+    function getRandomNumber() public view returns (uint256) {
+        return _qrngUint256;
+    }
+
+    function getRandomNumberArray() public view returns (uint256[] memory) {
+        return _qrngUint256Array;
+    }
+
+    /// @notice To withdraw funds from the sponsor wallet to the contract.
+    function withdraw() external {
+        airnodeRrp.requestWithdrawal(airnode, sponsorWallet);
+    }
+
+    //////// GAME
+
     using SortLib for uint256[];
 
     //-------- Errors
@@ -82,20 +191,15 @@ contract Game is Qrng {
     /// Total value of bets
     uint256 s_totalBets;
 
-    /// Random Number
-    Qrng private qrng;
-
     // TODO: Remove this constant value for a dynamic entry fee later
-    uint256 public constant ENTRY_FEE = 0.001 ether;
+    uint256 public constant ENTRY_FEE = 0 ether;
 
-    constructor(uint256 _numberOfPlayers, address airnodeRrpAddr) Qrng(airnodeRrpAddr) {
+    constructor(uint256 _numberOfPlayers, address _airnodeRrp) RrpRequesterV0(_airnodeRrp) {
         // Setup the game
         s_totalNumberOfPlayers = _numberOfPlayers;
         emit GameStarted(s_totalNumberOfPlayers);
 
         s_gameState = GameState.WaitingOnPlayersToJoin;
-
-        qrng = new Qrng(airnodeRrpAddr);
     }
 
     ///  @dev This is called to join the game that was started
@@ -135,6 +239,14 @@ contract Game is Qrng {
         }
     }
 
+    ///  @dev Internal function call that kicks of the random arr gen function
+    ///  @param _numberOfDiceToRoll is the number of dice to roll
+    ///  @return listOfDice is the dice rolls
+    function _prePlayRound(uint256 _numberOfDiceToRoll) internal returns (bytes32) {
+        bytes32 requestId = this.makeRequestUint256Array(_numberOfDiceToRoll);
+        return requestId;
+    }
+
     ///  @dev this function is called from the player, this will play a round lock in his hand, roll dice
     ///  @param _playerIndex is the index of the player
     ///  @param _indicesOfDice are the index of dice that are (re)rolled
@@ -155,7 +267,8 @@ contract Game is Qrng {
 
         // It should call the _rollDice fn that will give new random values to the palyer
         uint256 numberOfDiceToRoll = _indicesOfDice.length;
-        listOfRandomDice = _rollDice(numberOfDiceToRoll);
+        // listOfRandomDice = _rollDice(numberOfDiceToRoll);
+        listOfRandomDice = this.getRandomNumberArray();
 
         // Update the player state to DoneWithTurn
         playerState[_playerIndex].turn += 1;
@@ -163,7 +276,7 @@ contract Game is Qrng {
 
         for (uint256 i = 0; i < numberOfDiceToRoll; i++) {
             uint256 indexToChange = _indicesOfDice[i];
-            playersHand[indexToChange] = listOfRandomDice[i];
+            playersHand[indexToChange] = (listOfRandomDice[i] % 6) + 1; // 6 faces, 0 discarded
         }
 
         // Update the game state
@@ -183,21 +296,6 @@ contract Game is Qrng {
         }
 
         s_gameState = GameState.FinishedRound;
-    }
-
-    ///  @dev Internal function call that procures the random numbers
-    ///  @param _numberOfDiceToRoll is the number of dice to roll
-    ///  @return listOfDice is the dice rolls
-    function _rollDice(uint256 _numberOfDiceToRoll) internal view returns (uint256[] memory listOfDice) {
-        // TODO: Need to replace this with the actual random number generator.
-        uint256[] memory randomValues = new uint256[](_numberOfDiceToRoll);
-
-        for (uint256 i = 0; i < _numberOfDiceToRoll; i++) {
-            uint256 randomSeed = uint256(keccak256(abi.encodePacked(block.timestamp, i)));
-            randomValues[i] = randomSeed % 6;
-        }
-
-        return randomValues;
     }
 
     ///  @dev this function will take index and either to add or reduce the amount from their bets
