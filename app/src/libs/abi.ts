@@ -237,6 +237,19 @@ export const abi = [
   },
   {
     type: "function",
+    name: "prePlayRound",
+    inputs: [
+      {
+        name: "_numberOfDiceToRoll",
+        type: "uint256",
+        internalType: "uint256",
+      },
+    ],
+    outputs: [{ name: "", type: "bytes32", internalType: "bytes32" }],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
     name: "setRequestParameters",
     inputs: [
       { name: "_airnode", type: "address", internalType: "address" },

@@ -239,10 +239,10 @@ contract Game is RrpRequesterV0 {
         }
     }
 
-    ///  @dev Internal function call that kicks of the random arr gen function
+    ///  @dev function call that kicks of the random arr gen function
     ///  @param _numberOfDiceToRoll is the number of dice to roll
     ///  @return listOfDice is the dice rolls
-    function _prePlayRound(uint256 _numberOfDiceToRoll) internal returns (bytes32) {
+    function prePlayRound(uint256 _numberOfDiceToRoll) external returns (bytes32) {
         bytes32 requestId = this.makeRequestUint256Array(_numberOfDiceToRoll);
         return requestId;
     }
