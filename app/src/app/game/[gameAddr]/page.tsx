@@ -16,7 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ArrowLeftIcon, Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import {
   useGameStateReads,
   useGetAllPlayerDetails,
@@ -32,7 +32,6 @@ export default function JoinGame({ params }: { params: { gameAddr: string } }) {
   const { back, push } = useRouter();
 
   const { address } = useAccount();
-  const { data, args, chains } = useConfig();
 
   const {
     callJoinData,
@@ -86,15 +85,7 @@ export default function JoinGame({ params }: { params: { gameAddr: string } }) {
     } catch (e: any) {
       console.log(e);
     }
-
-    console.log({ callJoinGameLoading, callJoinGameSuccess });
   };
-
-  console.log(
-    allPlayerDetails?.filter(
-      (p) => parseInt((p.result as any)?.playerAddr?.slice(2)) != 0,
-    ),
-  );
 
   return (
     <div className="container">
@@ -197,7 +188,7 @@ export default function JoinGame({ params }: { params: { gameAddr: string } }) {
                           )}
                         >
                           {shortenAddressLink(
-                            (player?.result as any)?.playerAddr || "",
+                            (player?.result as any)?.playerAddr ?? "",
                           )}
                         </Link>
                       </div>

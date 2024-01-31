@@ -5,6 +5,7 @@ import {
   usePrepareContractWrite,
   useWaitForTransaction,
 } from "wagmi";
+import { parseEther } from "viem";
 
 import { abi } from "@/libs/abi";
 
