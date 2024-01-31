@@ -13,4 +13,8 @@ docs/
 # Dotenv file
 .env
 
-lib/
+lib
+
+flatten.sol
+
+node_modules
