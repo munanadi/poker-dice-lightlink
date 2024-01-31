@@ -19,12 +19,15 @@ import {
 } from "wagmi";
 import { formatEther, parseEther } from "viem/utils";
 import { abi } from "@/libs/abi";
+import { Check } from "lucide-react";
 
 export default function PlayGame() {
   const path = usePathname();
   const gameAddr = path.split("/")[2] as `0x${string}`;
 
   const [toAdd, setToAdd] = useState<boolean>(false);
+
+  const [indicesSelected, setIndicesSelected] = useState<Array<number>>([]);
 
   const [prePlayRoundArgs, setPrePlayRoundArgs] = useState<{
     count: string | undefined;
@@ -227,6 +230,18 @@ export default function PlayGame() {
     setChangeBetArgs((state) => ({ ...state, toAdd: !toAdd }));
   };
 
+  const selectDice = (e: any) => {
+    const index = e.target.parentNode.getAttribute("data-keyid");
+    console.log(`${index} selected`);
+    if (index != null) {
+      setIndicesSelected((state) =>
+        state.includes(index)
+          ? [...state.filter((s) => s !== index)]
+          : [...state, index],
+      );
+    }
+  };
+
   const nonZeroPlayers = allPlayerDetails?.filter(
     (p) => parseInt((p.result as any)?.playerAddr?.slice(2)) != 0,
   );
@@ -282,10 +297,11 @@ export default function PlayGame() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex gap-4">
-                      {hand.map((face) => (
-                        <div key={face + Math.random()}>
+                    <div className="flex gap-4" onClick={selectDice}>
+                      {hand.map((face, index) => (
+                        <div key={face + Math.random()} data-keyid={index}>
                           {diceFaceToString(parseInt(face.toString()))}
+                          {indicesSelected.includes(index) && <Check />}
                         </div>
                       ))}
                     </div>
@@ -358,6 +374,8 @@ export default function PlayGame() {
                               {isPrePlayLoading || isPlayRoundLoading
                                 ? "Rolling Dice"
                                 : "Roll Dice"}
+                              {indicesSelected.length != 0 &&
+                                ` - ${indicesSelected.toString()}`}
                             </Button>
                           </div>
                         </div>
