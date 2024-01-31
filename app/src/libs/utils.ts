@@ -1,5 +1,14 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import {
+  AceDice,
+  JokerDice,
+  KingDice,
+  NineDice,
+  QueenDice,
+  TenDice,
+  EmptyDice,
+} from "@/components/DiceFaces";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -26,10 +35,36 @@ export function gameStateToString(
   }
 }
 
-export function fetchExplorerLink(
-  entity: string,
-  type: "add" | "tx",
-): string {
+export function diceFaceToString(state: number | undefined): JSX.Element {
+  switch (state) {
+    // Ace,
+    case 1:
+      return AceDice();
+    // King,
+    case 2:
+      return KingDice();
+    // Queen,
+    case 3:
+      return QueenDice();
+    // Jack
+    case 4:
+      return JokerDice();
+    // 10
+    case 5:
+      return TenDice();
+    // 9
+    case 6:
+      return NineDice();
+    default:
+      return EmptyDice();
+  }
+}
+
+export const shortenAddressLink = (address: string): string => {
+  return `${address.slice(0, 6)}.....${address.slice(-6, -1)}`;
+};
+
+export function fetchExplorerLink(entity: string, type: "add" | "tx"): string {
   switch (type) {
     case "add":
       return `https://mumbai.polygonscan.com/address/${entity}`;

@@ -1,4 +1,5 @@
 import {
+  useContractRead,
   useContractReads,
   useContractWrite,
   usePrepareContractWrite,
@@ -29,6 +30,39 @@ export const useJoinGame = (contractAdd: `0x${string}`) => {
   };
 };
 
+export const useGetAllPlayerDetails = (
+  contractAdd: `0x${string}`,
+  count: number,
+) => {
+  const readObjs = [];
+
+  for (let i = 0; i < count; i++) {
+    const modifiedIndex = BigInt(i);
+    readObjs.push({
+      address: contractAdd,
+      abi: abi,
+      functionName: "getPlayerDetails",
+      args: [modifiedIndex],
+    });
+  }
+
+  const { data, error } = useContractReads({
+    contracts: [...readObjs],
+  });
+
+  if (error) {
+    return {
+      allPlayerDetails: undefined,
+      error,
+    };
+  }
+
+  return {
+    allPlayerDetails: data,
+    error: undefined,
+  };
+};
+
 export const useGameStateReads = (contractAdd: `0x${string}`) => {
   const gameContract = {
     address: contractAdd,
@@ -49,6 +83,10 @@ export const useGameStateReads = (contractAdd: `0x${string}`) => {
         ...gameContract,
         functionName: "getTotalNumberOfPlayers",
       },
+      {
+        ...gameContract,
+        functionName: "getTotalPrizePool",
+      },
     ],
   });
 
@@ -57,6 +95,7 @@ export const useGameStateReads = (contractAdd: `0x${string}`) => {
       gameState: undefined,
       currentCountOfPlayers: undefined,
       totalCountOfPlayers: undefined,
+      getTotalPrizePool: undefined,
       error,
     };
   }
@@ -64,11 +103,13 @@ export const useGameStateReads = (contractAdd: `0x${string}`) => {
   const gameState = data[0].result;
   const currentCountOfPlayers = data[1].result;
   const totalCountOfPlayers = data[2].result;
+  const getTotalPrizePool = data[3].result;
 
   return {
     gameState,
     currentCountOfPlayers,
     totalCountOfPlayers,
+    getTotalPrizePool,
     error: undefined,
   };
 };

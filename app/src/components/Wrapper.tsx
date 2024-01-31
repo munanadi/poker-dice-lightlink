@@ -10,15 +10,18 @@ import {
 import "@rainbow-me/rainbowkit/styles.css";
 import { WagmiConfig, configureChains, createConfig, Chain } from "wagmi";
 import { publicProvider } from "wagmi/providers/public";
-import LandingPage from "@/components/LandingPage";
 import { polygonMumbai } from "viem/chains";
 import NavBar from "@/components/NavBar";
-import NewRootLayout from "@/components/NewRootLayout";
+import { alchemyProvider } from "wagmi/providers/alchemy";
+import { jsonRpcProvider } from "wagmi/providers/jsonRpc";
 
 export default function Wrapper({ children }: any) {
   const [isMounted, setIsMounted] = useState(false);
   const [wagmiConfig, setWagmiConfig] = useState<any | null>(null);
   const [chains, setChains] = useState<any | null>(null);
+
+  // console.log(process.env.NEXT_PROVIDER_URL)
+  // console.log(process.env.PROVIDER_URL)
 
   useEffect(() => {
     setIsMounted(true);
@@ -51,7 +54,14 @@ export default function Wrapper({ children }: any) {
         polygonMumbai,
         ...(process.env.NEXT_PUBLIC_ENABLE_TESTNETS === "true" ? [] : []),
       ],
-      [publicProvider()],
+      [ publicProvider(),
+        alchemyProvider({ apiKey: "" }),
+        jsonRpcProvider({
+          rpc: (pegasus) => ({
+            http: "https://replicator.pegasus.lightlink.io/rpc/v1",
+          }),
+        }),
+      ],
     );
     setChains(chains);
 

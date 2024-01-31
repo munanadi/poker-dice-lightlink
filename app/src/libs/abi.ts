@@ -133,6 +133,36 @@ export const abi = [
   },
   {
     type: "function",
+    name: "getPlayerDetails",
+    inputs: [
+      { name: "_playerIndex", type: "uint256", internalType: "uint256" },
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "tuple",
+        internalType: "struct Game.Player",
+        components: [
+          { name: "index", type: "uint256", internalType: "uint256" },
+          {
+            name: "playerAddr",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "hand",
+            type: "uint256[]",
+            internalType: "uint256[]",
+          },
+          { name: "bet", type: "uint256", internalType: "uint256" },
+          { name: "turn", type: "uint256", internalType: "uint256" },
+        ],
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
     name: "getRandomNumber",
     inputs: [],
     outputs: [{ name: "", type: "uint256", internalType: "uint256" }],

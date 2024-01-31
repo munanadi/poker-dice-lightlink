@@ -3,7 +3,11 @@
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { fetchExplorerLink, gameStateToString } from "@/libs/utils";
+import {
+  fetchExplorerLink,
+  gameStateToString,
+  shortenAddressLink,
+} from "@/libs/utils";
 import {
   Card,
   CardContent,
@@ -12,17 +16,23 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ArrowLeftIcon, Loader2 } from "lucide-react";
-import { useEffect } from "react";
-import { useGameStateReads, useJoinGame } from "@/libs/contractHelpers";
+import { useEffect, useState } from "react";
+import {
+  useGameStateReads,
+  useGetAllPlayerDetails,
+  useJoinGame,
+} from "@/libs/contractHelpers";
+import { useAccount, useConfig, useNetwork, useWalletClient } from "wagmi";
+import { Separator } from "@/components/ui/separator";
+import Link from "next/link";
 
 export default function JoinGame({ params }: { params: { gameAddr: string } }) {
   const gameAddr = `0x${params.gameAddr.slice(2)}` as const;
 
-  const { back } = useRouter();
+  const { back, push } = useRouter();
 
-  useEffect(() => {
-    toast("Game Found", { duration: 1000 });
-  }, []);
+  const { address } = useAccount();
+  const { data, args, chains } = useConfig();
 
   const {
     callJoinData,
@@ -36,6 +46,24 @@ export default function JoinGame({ params }: { params: { gameAddr: string } }) {
   const { currentCountOfPlayers, gameState, totalCountOfPlayers, error } =
     useGameStateReads(gameAddr);
 
+  const { allPlayerDetails } = useGetAllPlayerDetails(
+    gameAddr,
+    parseInt(totalCountOfPlayers?.toString() || "0"),
+  );
+
+  useEffect(() => {
+    toast("Game Found", { duration: 1000 });
+  }, []);
+
+  useEffect(() => {
+    if (callJoinGameSuccess) {
+      toast(`Game joined!`, {
+        duration: 1000,
+        description: fetchExplorerLink(callJoinData?.hash!, "tx"),
+      });
+    }
+  }, [callJoinGameSuccess]);
+
   // Kick back if gameAddr doesnt exist
   if (error) {
     back();
@@ -43,9 +71,16 @@ export default function JoinGame({ params }: { params: { gameAddr: string } }) {
     return;
   }
 
-  const joinGame = async () => {
-    toast("hanlde join game");
+  // If this is -1, the current account is not playing this game
+  const currentPlayerIndex = allPlayerDetails?.findIndex(
+    (player) => (player?.result as any)?.playerAddr == address,
+  );
 
+  if (currentPlayerIndex != -1) {
+    push(`/game/${gameAddr}/play`);
+  }
+
+  const joinGame = async () => {
     try {
       await callJoinGame?.();
     } catch (e: any) {
@@ -54,6 +89,12 @@ export default function JoinGame({ params }: { params: { gameAddr: string } }) {
 
     console.log({ callJoinGameLoading, callJoinGameSuccess });
   };
+
+  console.log(
+    allPlayerDetails?.filter(
+      (p) => parseInt((p.result as any)?.playerAddr?.slice(2)) != 0,
+    ),
+  );
 
   return (
     <div className="container">
@@ -68,7 +109,17 @@ export default function JoinGame({ params }: { params: { gameAddr: string } }) {
           <div className="md:col-span-4 lg:col-span-3 xl:col-span-4 flex flex-col gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>Game Details {params.gameAddr}</CardTitle>
+                <CardTitle>
+                  Game Details
+                  <p className="mt-1 underline">
+                    <Link
+                      href={fetchExplorerLink(gameAddr, "add")}
+                      target="_blank"
+                    >
+                      {gameAddr}
+                    </Link>
+                  </p>
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid gap-4">
@@ -120,7 +171,37 @@ export default function JoinGame({ params }: { params: { gameAddr: string } }) {
                   <CardTitle>Game Owner</CardTitle>
                 </CardHeader>
                 <CardContent className="text-sm">
+                  {/* TODO:  */}
                   <div className="grid gap-1">Owner Addr goes here</div>
+                </CardContent>
+              </div>
+              <Separator />
+              <div>
+                <CardHeader className="flex flex-row items-center space-y-0">
+                  <CardTitle>Players in this game</CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm">
+                  {allPlayerDetails
+                    ?.filter(
+                      (p) =>
+                        parseInt((p.result as any)?.playerAddr?.slice(2)) != 0,
+                    )
+                    .map((player, i) => (
+                      <div key={(player?.result as any)?.playerAddr + i}>
+                        <Link
+                          className="grid gap-1 underline"
+                          target="_blank"
+                          href={fetchExplorerLink(
+                            (player?.result as any)?.playerAddr,
+                            "add",
+                          )}
+                        >
+                          {shortenAddressLink(
+                            (player?.result as any)?.playerAddr || "",
+                          )}
+                        </Link>
+                      </div>
+                    ))}
                 </CardContent>
               </div>
             </Card>
