@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useConnect, useAccount, useBalance } from "wagmi";
 
-export default function First() {
+export default function LandingPage() {
   const { isConnected, address } = useAccount();
 
   return (

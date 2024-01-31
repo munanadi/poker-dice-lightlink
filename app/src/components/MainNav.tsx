@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { cn } from "@/lib/utils";
+import { cn } from "@/libs/utils";
 
 export function MainNav() {
   const pathname = usePathname();
@@ -43,7 +43,7 @@ export function MainNav() {
           Player Screen
         </Link>
         <Link
-          href="/join-game"
+          href="/find-game"
           className={cn(
             "transition-colors hover:text-foreground/80",
             pathname?.startsWith("/docs/components")
@@ -51,7 +51,7 @@ export function MainNav() {
               : "text-foreground/60",
           )}
         >
-          Join a Game
+          Find a Game
         </Link>
       </nav>
     </div>

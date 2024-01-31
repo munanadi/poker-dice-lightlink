@@ -189,7 +189,7 @@ contract Game is RrpRequesterV0 {
     /// Game state
     GameState private s_gameState;
     /// Total value of bets
-    uint256 s_totalBets;
+    uint256 private s_totalBets;
 
     // TODO: Remove this constant value for a dynamic entry fee later
     uint256 public constant ENTRY_FEE = 0 ether;
@@ -417,6 +417,13 @@ contract Game is RrpRequesterV0 {
             revert PlayerIndexNotExist(_playerIndex);
         }
         return playerState[_playerIndex].bet;
+    }
+    
+    function getPlayerDetails(uint256 _playerIndex) public view returns(Player memory){
+        if (_playerIndex >= s_totalNumberOfPlayers) {
+            revert PlayerIndexNotExist(_playerIndex);
+        }
+        return playerState[_playerIndex];
     }
 
     function getGameState() public view returns (GameState) {
