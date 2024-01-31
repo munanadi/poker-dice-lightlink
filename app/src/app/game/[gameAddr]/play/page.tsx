@@ -11,11 +11,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useState } from "react";
-import { Satellite } from "lucide-react";
 import {
   useContractWrite,
   usePrepareContractWrite,
   useWaitForTransaction,
+  useContractEvent,
 } from "wagmi";
 import { formatEther, parseEther } from "viem/utils";
 import { abi } from "@/libs/abi";
@@ -25,7 +25,22 @@ export default function PlayGame() {
   const gameAddr = path.split("/")[2] as `0x${string}`;
 
   const [toAdd, setToAdd] = useState<boolean>(false);
-  const [args, setArgs] = useState<{
+
+  const [prePlayRoundArgs, setPrePlayRoundArgs] = useState<{
+    count: string | undefined;
+  }>({
+    count: "5",
+  });
+
+  const [playRoundArgs, setPlayRoundArgs] = useState<{
+    playerIndex: string | undefined;
+    indicesArr: string | undefined;
+  }>({
+    playerIndex: undefined,
+    indicesArr: undefined,
+  });
+
+  const [changeBetArgs, setChangeBetArgs] = useState<{
     playerIndex: string | undefined;
     toAdd: boolean | undefined;
     betAmount: string | undefined;
@@ -35,6 +50,29 @@ export default function PlayGame() {
     betAmount: undefined,
   });
 
+  const unWatchReq = useContractEvent({
+    address: gameAddr,
+    abi: abi,
+    eventName: "RequestedUint256Array",
+    listener(log) {
+      const receivedReqId = log[0].args.requestId ?? "";
+      console.log(`fired request : ${receivedReqId}`);
+      unWatchReq?.();
+    },
+  });
+
+  useContractEvent({
+    address: gameAddr,
+    abi: abi,
+    eventName: "ReceivedUint256Array",
+    listener(log) {
+      const receivedReqId = log[0].args.requestId ?? "";
+      console.log(`${receivedReqId} req is fulfilled`);
+      // Call the actual play round here.
+      callPlayRound();
+    },
+  });
+
   const { totalCountOfPlayers } = useGameStateReads(gameAddr);
 
   const { allPlayerDetails } = useGetAllPlayerDetails(
@@ -42,41 +80,134 @@ export default function PlayGame() {
     parseInt(totalCountOfPlayers?.toString() ?? "0"),
   );
 
-  const nonZeroPlayers = allPlayerDetails?.filter(
-    (p) => parseInt((p.result as any)?.playerAddr?.slice(2)) != 0,
-  );
-
-  const { config, error, isError } = usePrepareContractWrite({
+  const {
+    config: changeBetConfig,
+    error: changeBetError,
+    isError: isChangeBetError,
+  } = usePrepareContractWrite({
     address: gameAddr,
     abi,
     functionName: "changeBet",
-    args: [BigInt(args.playerIndex ?? ""), args.toAdd ?? false],
-    value: parseEther(args.betAmount ?? ""),
+    args: [
+      BigInt(changeBetArgs.playerIndex ?? ""),
+      changeBetArgs.toAdd ?? false,
+    ],
+    value: parseEther(changeBetArgs.betAmount ?? ""),
   });
 
-  const { data, writeAsync } = useContractWrite(config);
-  const { isLoading } = useWaitForTransaction({
-    hash: data?.hash,
+  const { data: changeBetData, writeAsync: changeBetWriteAsync } =
+    useContractWrite(changeBetConfig);
+
+  const { isLoading: isChangeBetLoading } = useWaitForTransaction({
+    hash: changeBetData?.hash,
   });
 
-  const callRollDice = () => {
-    toast("call roll dice here", { duration: 1000 });
+  const {
+    config: prePlayConfig,
+    error: prePlayError,
+    isError: isPrePlayError,
+  } = usePrepareContractWrite({
+    address: gameAddr,
+    abi,
+    functionName: "prePlayRound",
+    args: [BigInt(prePlayRoundArgs.count ?? "")],
+  });
+
+  const { data: prePlayData, writeAsync: prePlayWriteAsync } =
+    useContractWrite(prePlayConfig);
+
+  const { isLoading: isPrePlayLoading } = useWaitForTransaction({
+    hash: prePlayData?.hash,
+  });
+
+  const {
+    config: playRoundConfig,
+    error: playRoundError,
+    isError: isPlayRoundError,
+  } = usePrepareContractWrite({
+    address: gameAddr,
+    abi,
+    functionName: "playRound",
+    args: [
+      // BigInt(playRoundArgs.playerIndex ?? ""),
+      BigInt(0),
+      [BigInt(0), BigInt(1), BigInt(2), BigInt(3), BigInt(4)],
+    ],
+  });
+
+  const { data: playRoundData, writeAsync: playRoundWriteAsync } =
+    useContractWrite(playRoundConfig);
+
+  const { isLoading: isPlayRoundLoading } = useWaitForTransaction({
+    hash: playRoundData?.hash,
+  });
+
+  const callPlayRound = async () => {
+    // TODO: Temp remove to check if random works
+    // if (
+    //   playRoundArgs.playerIndex == undefined ||
+    //   playRoundArgs.indicesArr == undefined
+    // ) {
+    //   toast.error("Please enter the required args");
+    //   return;
+    // }
+
+    const data = await playRoundWriteAsync?.();
+
+    if (data?.hash) {
+      toast.success(
+        <div className="flex gap-2 justify-between">
+          <div className="font-bold">Playing Round</div>
+          <div className="text-sm text-slate-500 dark:text-slate-400 underline">
+            <a target="_blank" href={fetchExplorerLink(data?.hash!, "tx")}>
+              Explore Txn
+            </a>
+          </div>
+        </div>,
+      );
+    } else {
+      toast.error("something went wrong while playing round");
+    }
+  };
+
+  const callPrePlay = async () => {
+    if (!prePlayRoundArgs.count) {
+      toast.error("Please enter the required args");
+      return;
+    }
+
+    const data = await prePlayWriteAsync?.();
+
+    if (data?.hash) {
+      toast.success(
+        <div className="flex gap-2 justify-between">
+          <div className="font-bold">Requesting for random numbers</div>
+          <div className="text-sm text-slate-500 dark:text-slate-400 underline">
+            <a target="_blank" href={fetchExplorerLink(data?.hash!, "tx")}>
+              Explore Txn
+            </a>
+          </div>
+        </div>,
+      );
+    } else {
+      toast.error("something went wrong while rolling dice");
+    }
   };
 
   const callAdjustBet = async () => {
     if (
-      !args.betAmount ||
-      args.playerIndex == undefined ||
-      args.toAdd == undefined
+      !changeBetArgs.betAmount == undefined ||
+      changeBetArgs.playerIndex == undefined ||
+      changeBetArgs.toAdd == undefined
     ) {
       toast.error("Please enter the required args");
       return;
     }
 
-    const data = await writeAsync?.();
+    const data = await changeBetWriteAsync?.();
 
     if (data?.hash) {
-      toast(
+      toast.success(
         <div className="flex gap-2 justify-between">
           <div className="font-bold">Bet placed</div>
           <div className="text-sm text-slate-500 dark:text-slate-400 underline">
@@ -86,13 +217,19 @@ export default function PlayGame() {
           </div>
         </div>,
       );
+    } else {
+      toast.error("something went wrong while adjusting bet");
     }
   };
 
   const toggleSwitch = () => {
     setToAdd((state) => !state);
-    setArgs((state) => ({ ...state, toAdd: !toAdd }));
+    setChangeBetArgs((state) => ({ ...state, toAdd: !toAdd }));
   };
+
+  const nonZeroPlayers = allPlayerDetails?.filter(
+    (p) => parseInt((p.result as any)?.playerAddr?.slice(2)) != 0,
+  );
 
   return (
     <div className="flex flex-col items-center justify-start min-h-screen bg-gray-100 dark:bg-gray-900">
@@ -148,7 +285,7 @@ export default function PlayGame() {
                     <div className="flex gap-4">
                       {hand.map((face) => (
                         <div key={face + Math.random()}>
-                          {diceFaceToString(face)}
+                          {diceFaceToString(parseInt(face.toString()))}
                         </div>
                       ))}
                     </div>
@@ -162,7 +299,7 @@ export default function PlayGame() {
                           placeholder="0.1 ETH"
                           type="number"
                           onChange={(e) =>
-                            setArgs((state) => ({
+                            setChangeBetArgs((state) => ({
                               ...state,
                               betAmount: e.target.value,
                               playerIndex: index,
@@ -186,20 +323,20 @@ export default function PlayGame() {
                                 Remove
                               </Button>
                             )}
-                            {args.betAmount && (
+                            {changeBetArgs.betAmount && (
                               <div className="flex gap-2">
                                 <span className="text-sm text-slate-500 dark:text-slate-400">
                                   {toAdd ? "Adding" : "Reducing"}{" "}
-                                  {args.betAmount}ETH
+                                  {changeBetArgs.betAmount}ETH
                                 </span>
                                 <span className="text-sm text-slate-500 dark:text-slate-400">
                                   New bet will be{" "}
                                   {/* TODO: Fix this calculation of new bet */}
                                   {toAdd
                                     ? parseFloat(bet) +
-                                      parseFloat(args.betAmount)
+                                      parseFloat(changeBetArgs.betAmount)
                                     : parseFloat(bet) -
-                                      parseFloat(args.betAmount)}
+                                      parseFloat(changeBetArgs.betAmount)}
                                   ETH
                                 </span>
                               </div>
@@ -207,12 +344,21 @@ export default function PlayGame() {
                           </div>
                           <div className="flex gap-2">
                             <Button
-                              disabled={!writeAsync}
+                              disabled={!changeBetWriteAsync}
                               onClick={callAdjustBet}
                             >
-                              {isLoading ? "Adjusting Bet" : "Adjust Bet"}
+                              {isChangeBetLoading
+                                ? "Adjusting Bet"
+                                : "Adjust Bet"}
                             </Button>
-                            <Button onClick={callRollDice}>Roll Dice</Button>
+                            <Button
+                              disabled={!prePlayWriteAsync}
+                              onClick={callPrePlay}
+                            >
+                              {isPrePlayLoading || isPlayRoundLoading
+                                ? "Rolling Dice"
+                                : "Roll Dice"}
+                            </Button>
                           </div>
                         </div>
                       </div>
@@ -224,7 +370,15 @@ export default function PlayGame() {
         </main>
       </div>
       {/* Prepare Error */}
-      {(isError || error) && <div>Error: {(error || error)?.message}</div>}
+      {(isChangeBetError || changeBetError) && (
+        <div>Error: {(changeBetError || changeBetError)?.message}</div>
+      )}
+      {(isPrePlayError || prePlayError) && (
+        <div>Error: {(prePlayError || prePlayError)?.message}</div>
+      )}
+      {(isPlayRoundError || playRoundError) && (
+        <div>Error: {(playRoundError || playRoundError)?.message}</div>
+      )}
     </div>
   );
 }
