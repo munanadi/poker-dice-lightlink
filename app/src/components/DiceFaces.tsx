@@ -1,63 +1,53 @@
 export const KingDice = () => {
   return (
-    <div className="w-16 h-16 flex items-center justify-center bg-white shadow-lg rounded-lg dark:bg-gray-800">
-      <KingIcon className="h-10 w-10 text-gray-900 dark:text-gray-100" />
+    <div className="w-16 h-16 flex items-center justify-center bg-white shadow-lg rounded-lg  hover:cursor-pointer  hover:text-white  hover:bg-gray-700 hover:animate-pulse">
+      <div className="text-gray-900flex items-center">
+        <KingIcon className="h-10 w-10 text-gray-900 dark:text-gray-10" />
+      </div>
     </div>
   );
 };
 
 export const QueenDice = () => {
   return (
-    <div className="w-16 h-16 flex items-center justify-center bg-white shadow-lg rounded-lg dark:bg-gray-800">
-      <div className="text-gray-900 dark:text-gray-100 flex items-center">
-        Q
-      </div>
+    <div className="w-16 h-16 flex items-center justify-center bg-white shadow-lg rounded-lg  hover:cursor-pointer  hover:text-white  hover:bg-gray-700 hover:animate-pulse">
+      <div className="text-gray-900flex items-center">Q</div>
     </div>
   );
 };
 export const JokerDice = () => {
   return (
-    <div className="w-16 h-16 flex items-center justify-center bg-white shadow-lg rounded-lg dark:bg-gray-800">
-      <div className="text-gray-900 dark:text-gray-100 flex items-center">
-        J
-      </div>
+    <div className="w-16 h-16 flex items-center justify-center bg-white shadow-lg rounded-lg  hover:cursor-pointer  hover:text-white  hover:bg-gray-700 hover:animate-pulse">
+      <div className="text-gray-900flex items-center">J</div>
     </div>
   );
 };
 export const TenDice = () => {
   return (
-    <div className="w-16 h-16 flex items-center justify-center bg-white shadow-lg rounded-lg dark:bg-gray-800">
-      <div className="text-gray-900 dark:text-gray-100 flex items-center">
-        10
-      </div>
+    <div className="w-16 h-16 flex items-center justify-center bg-white shadow-lg rounded-lg  hover:cursor-pointer  hover:text-white  hover:bg-gray-700 hover:animate-pulse">
+      <div className="text-gray-900flex items-center">10</div>
     </div>
   );
 };
 export const NineDice = () => {
   return (
-    <div className="w-16 h-16 flex items-center justify-center bg-white shadow-lg rounded-lg dark:bg-gray-800">
-      <div className="text-gray-900 dark:text-gray-100 flex items-center">
-        9
-      </div>
+    <div className="w-16 h-16 flex items-center justify-center bg-white shadow-lg rounded-lg  hover:cursor-pointer  hover:text-white  hover:bg-gray-700 hover:animate-pulse">
+      <div className="text-gray-900flex items-center">9</div>
     </div>
   );
 };
 export const AceDice = () => {
   return (
-    <div className="w-16 h-16 flex items-center justify-center bg-white shadow-lg rounded-lg dark:bg-gray-800">
-      <div className="text-gray-900 dark:text-gray-100 flex items-center">
-        A
-      </div>
+    <div className="w-16 h-16 flex items-center justify-center bg-white shadow-lg rounded-lg  hover:cursor-pointer  hover:text-white  hover:bg-gray-700 hover:animate-pulse">
+      <div className="text-gray-900flex items-center">A</div>
     </div>
   );
 };
 
 export const EmptyDice = () => {
   return (
-    <div className="w-16 h-16 flex items-center justify-center bg-white shadow-lg rounded-lg dark:bg-gray-800">
-      <div className="text-gray-900 dark:text-gray-100 flex items-center">
-        ?
-      </div>
+    <div className="w-16 h-16 flex items-center justify-center bg-white shadow-lg rounded-lg  hover:cursor-pointer  hover:text-white  hover:bg-gray-700 hover:animate-pulse">
+      <div className="text-gray-900flex items-center">?</div>
     </div>
   );
 };
