@@ -21,6 +21,7 @@ import { formatEther, parseEther } from "viem/utils";
 import { abi } from "@/libs/abi";
 import { Check } from "lucide-react";
 import { useLocalStorage } from "@uidotdev/usehooks";
+import { userPlayerDetailsStore } from "@/store/usePlayerDetailsStore";
 
 export default function PlayGame() {
   const path = usePathname();
@@ -57,6 +58,8 @@ export default function PlayGame() {
     indicesArr: Array<string> | undefined;
   }>("args", { playerIndex: undefined, indicesArr: undefined });
 
+  const { players } = userPlayerDetailsStore();
+
   const unWatchReq = useContractEvent({
     address: gameAddr,
     abi: abi,
@@ -79,13 +82,6 @@ export default function PlayGame() {
       callPlayRound();
     },
   });
-
-  const { totalCountOfPlayers } = useGameStateReads(gameAddr);
-
-  const { allPlayerDetails } = useGetAllPlayerDetails(
-    gameAddr,
-    parseInt(totalCountOfPlayers?.toString() ?? "0"),
-  );
 
   const {
     config: changeBetConfig,
@@ -286,23 +282,19 @@ export default function PlayGame() {
     }
   };
 
-  const nonZeroPlayers = allPlayerDetails?.filter(
-    (p) => parseInt((p.result as any)?.playerAddr?.slice(2)) != 0,
-  );
-
   return (
     <div className="flex flex-col items-center justify-start min-h-screen bg-gray-100 dark:bg-gray-900">
       <div className="container">
         <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
-          {nonZeroPlayers &&
-            nonZeroPlayers.map((player) => {
+          {players &&
+            players.map((player) => {
               const {
                 playerAddr,
                 bet,
                 index,
                 turn,
                 hand: rawHand,
-              } = player.result as any;
+              } = player as any;
               const hand = rawHand.toString().split(",") as Array<number>;
               return (
                 <div
@@ -358,84 +350,90 @@ export default function PlayGame() {
                       ))}
                     </div>
                   </div>
-                  <div>
-                    <div className="space-y-4">
-                      <div className="space-y-1">
-                        <Label htmlFor="bet-amount">Bet Amount</Label>
-                        <Input
-                          id="bet-amount"
-                          placeholder="0.1 ETH"
-                          type="number"
-                          onChange={(e) =>
-                            setChangeBetArgs((state) => ({
-                              ...state,
-                              betAmount: e.target.value,
-                              playerIndex: index,
-                            }))
-                          }
-                        />
-                        <div className="flex flex-col gap-2 items-center mx-2">
-                          <div className="flex gap-2 items-center">
-                            {toAdd ? (
+                  {parseInt(turn) < 2 ? (
+                    <div>
+                      <div className="space-y-4">
+                        <div className="space-y-1">
+                          <Label htmlFor="bet-amount">Bet Amount</Label>
+                          <Input
+                            id="bet-amount"
+                            placeholder="0.1 ETH"
+                            type="number"
+                            onChange={(e) =>
+                              setChangeBetArgs((state) => ({
+                                ...state,
+                                betAmount: e.target.value,
+                                playerIndex: index,
+                              }))
+                            }
+                          />
+                          <div className="flex flex-col gap-2 items-center mx-2">
+                            <div className="flex gap-2 items-center">
+                              {toAdd ? (
+                                <Button
+                                  variant={"outline"}
+                                  onClick={toggleSwitch}
+                                >
+                                  Add
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant={"outline"}
+                                  onClick={toggleSwitch}
+                                >
+                                  Remove
+                                </Button>
+                              )}
+                              {changeBetArgs.betAmount && (
+                                <div className="flex gap-2">
+                                  <span className="text-sm text-slate-500 dark:text-slate-400">
+                                    {toAdd ? "Adding" : "Reducing"}{" "}
+                                    {changeBetArgs.betAmount}ETH
+                                  </span>
+                                  <span className="text-sm text-slate-500 dark:text-slate-400">
+                                    New bet will be{" "}
+                                    {/* TODO: Fix this calculation of new bet */}
+                                    {toAdd
+                                      ? parseFloat(bet) +
+                                        parseFloat(changeBetArgs.betAmount)
+                                      : parseFloat(bet) -
+                                        parseFloat(changeBetArgs.betAmount)}
+                                    ETH
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex gap-2">
                               <Button
-                                variant={"outline"}
-                                onClick={toggleSwitch}
+                                disabled={!changeBetWriteAsync}
+                                onClick={callAdjustBet}
                               >
-                                Add
+                                {isChangeBetLoading
+                                  ? "Adjusting Bet"
+                                  : "Adjust Bet"}
                               </Button>
-                            ) : (
                               <Button
-                                variant={"outline"}
-                                onClick={toggleSwitch}
+                                disabled={!prePlayWriteAsync}
+                                onClick={callPrePlay}
                               >
-                                Remove
+                                {(playRoundArgs.indicesArr ?? []).length == 0
+                                  ? "Select dice to roll"
+                                  : isPrePlayLoading || isPlayRoundLoading
+                                  ? "Rolling Dice"
+                                  : "Roll Dice"}
+                                {(playRoundArgs.indicesArr ?? []).length != 0 &&
+                                  ` - ${playRoundArgs.indicesArr?.toString()}`}
                               </Button>
-                            )}
-                            {changeBetArgs.betAmount && (
-                              <div className="flex gap-2">
-                                <span className="text-sm text-slate-500 dark:text-slate-400">
-                                  {toAdd ? "Adding" : "Reducing"}{" "}
-                                  {changeBetArgs.betAmount}ETH
-                                </span>
-                                <span className="text-sm text-slate-500 dark:text-slate-400">
-                                  New bet will be{" "}
-                                  {/* TODO: Fix this calculation of new bet */}
-                                  {toAdd
-                                    ? parseFloat(bet) +
-                                      parseFloat(changeBetArgs.betAmount)
-                                    : parseFloat(bet) -
-                                      parseFloat(changeBetArgs.betAmount)}
-                                  ETH
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex gap-2">
-                            <Button
-                              disabled={!changeBetWriteAsync}
-                              onClick={callAdjustBet}
-                            >
-                              {isChangeBetLoading
-                                ? "Adjusting Bet"
-                                : "Adjust Bet"}
-                            </Button>
-                            <Button
-                              disabled={!prePlayWriteAsync}
-                              onClick={callPrePlay}
-                            >
-                              {(playRoundArgs.indicesArr ?? []).length == 0
-                                ? "Select dice to roll"
-                                : isPrePlayLoading || isPlayRoundLoading
-                                ? "Rolling Dice"
-                                : "Roll Dice"}
-                              {(playRoundArgs.indicesArr ?? []).length != 0 &&
-                                ` - ${playRoundArgs.indicesArr?.toString()}`}
-                            </Button>
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="text-2xl text-bold">
+                      Your turns are over
+                    </div>
+                  )}
                 </div>
               );
             })}

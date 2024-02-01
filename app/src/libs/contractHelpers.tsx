@@ -91,6 +91,17 @@ export const useGameStateReads = (contractAdd: `0x${string}`) => {
     ],
   });
 
+  if (data && data.every((d) => d.status == "failure")) {
+    // All fetches failed, cannot be a game.
+    return {
+      gameState: undefined,
+      currentCountOfPlayers: undefined,
+      totalCountOfPlayers: undefined,
+      getTotalPrizePool: undefined,
+      error: "not a game",
+    };
+  }
+
   if (!data) {
     return {
       gameState: undefined,
@@ -101,10 +112,10 @@ export const useGameStateReads = (contractAdd: `0x${string}`) => {
     };
   }
 
-  const gameState = data[0].result;
-  const currentCountOfPlayers = data[1].result;
-  const totalCountOfPlayers = data[2].result;
-  const getTotalPrizePool = data[3].result;
+  const gameState = data[0].status == "success" && data[0].result;
+  const currentCountOfPlayers = data[0].status == "success" && data[1].result;
+  const totalCountOfPlayers = data[0].status == "success" && data[2].result;
+  const getTotalPrizePool = data[0].status == "success" && data[3].result;
 
   return {
     gameState,

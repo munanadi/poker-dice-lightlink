@@ -17,14 +17,12 @@ import {
 } from "@/components/ui/card";
 import { ArrowLeftIcon, Loader2 } from "lucide-react";
 import { useEffect } from "react";
-import {
-  useGameStateReads,
-  useGetAllPlayerDetails,
-  useJoinGame,
-} from "@/libs/contractHelpers";
+import { useGetAllPlayerDetails, useJoinGame } from "@/libs/contractHelpers";
 import { useAccount } from "wagmi";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
+import { useGameStateStore } from "@/store/useGameStore";
+import { userPlayerDetailsStore } from "@/store/usePlayerDetailsStore";
 
 export default function JoinGame({ params }: { params: { gameAddr: string } }) {
   const gameAddr = `0x${params.gameAddr.slice(2)}` as const;
@@ -32,6 +30,8 @@ export default function JoinGame({ params }: { params: { gameAddr: string } }) {
   const { back, push } = useRouter();
 
   const { address } = useAccount();
+
+  const { setPlayers } = userPlayerDetailsStore();
 
   const {
     callJoinData,
@@ -42,8 +42,8 @@ export default function JoinGame({ params }: { params: { gameAddr: string } }) {
     callJoinPrepareError,
   } = useJoinGame(gameAddr);
 
-  const { currentCountOfPlayers, gameState, totalCountOfPlayers, error } =
-    useGameStateReads(gameAddr);
+  const { currentCountOfPlayers, gameState, totalBet, totalCountOfPlayers } =
+    useGameStateStore();
 
   const { allPlayerDetails } = useGetAllPlayerDetails(
     gameAddr,
@@ -56,8 +56,12 @@ export default function JoinGame({ params }: { params: { gameAddr: string } }) {
   );
 
   useEffect(() => {
-    toast.success(`Game ${gameAddr} found!`);
-  }, []);
+    setPlayers(
+      allPlayerDetails
+        ?.filter((d) => parseInt((d.result as any).playerAddr?.slice(2)) != 0)
+        ?.map((d) => d.result as any),
+    );
+  }, [gameAddr, totalCountOfPlayers]);
 
   useEffect(() => {
     if (currentPlayerIndex != -1) {
@@ -73,13 +77,6 @@ export default function JoinGame({ params }: { params: { gameAddr: string } }) {
       });
     }
   }, [callJoinGameSuccess]);
-
-  // Kick back if gameAddr doesnt exist
-  if (error) {
-    back();
-    toast("Game failed to join", { duration: 1000 });
-    return;
-  }
 
   const joinGame = async () => {
     if (callJoinIsPrepareError) {
@@ -218,7 +215,9 @@ export default function JoinGame({ params }: { params: { gameAddr: string } }) {
 
       {/* Prepare Error */}
       {(callJoinIsPrepareError || callJoinPrepareError) && (
-        <div>Error: {(callJoinPrepareError || error)?.message}</div>
+        <div>
+          Error: {(callJoinPrepareError || callJoinPrepareError)?.message}
+        </div>
       )}
     </div>
   );
