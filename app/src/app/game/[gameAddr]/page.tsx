@@ -22,7 +22,7 @@ import {
   useGetAllPlayerDetails,
   useJoinGame,
 } from "@/libs/contractHelpers";
-import { useAccount, useConfig, useNetwork, useWalletClient } from "wagmi";
+import { useAccount } from "wagmi";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 
@@ -50,14 +50,25 @@ export default function JoinGame({ params }: { params: { gameAddr: string } }) {
     parseInt(totalCountOfPlayers?.toString() || "0"),
   );
 
+  // If this is -1, the current account is not playing this game
+  const currentPlayerIndex = allPlayerDetails?.findIndex(
+    (player) => (player?.result as any)?.playerAddr == address,
+  );
+
   useEffect(() => {
-    toast("Game Found", { duration: 1000 });
+    toast.success(`Game ${gameAddr} found!`);
   }, []);
 
   useEffect(() => {
+    if (currentPlayerIndex != -1) {
+      push(`/game/${gameAddr}/play`);
+      return;
+    }
+  }, [currentPlayerIndex]);
+
+  useEffect(() => {
     if (callJoinGameSuccess) {
-      toast(`Game joined!`, {
-        duration: 1000,
+      toast.success(`Game joined!`, {
         description: fetchExplorerLink(callJoinData?.hash!, "tx"),
       });
     }
@@ -70,16 +81,12 @@ export default function JoinGame({ params }: { params: { gameAddr: string } }) {
     return;
   }
 
-  // If this is -1, the current account is not playing this game
-  const currentPlayerIndex = allPlayerDetails?.findIndex(
-    (player) => (player?.result as any)?.playerAddr == address,
-  );
-
-  if (currentPlayerIndex != -1) {
-    push(`/game/${gameAddr}/play`);
-  }
-
   const joinGame = async () => {
+    if (callJoinIsPrepareError) {
+      toast.error("prepare contract for joingame error");
+      return;
+    }
+
     try {
       await callJoinGame?.();
     } catch (e: any) {
