@@ -20,6 +20,7 @@ import {
 import { formatEther, parseEther } from "viem/utils";
 import { abi } from "@/libs/abi";
 import { Check } from "lucide-react";
+import { useLocalStorage } from "@uidotdev/usehooks";
 
 export default function PlayGame() {
   const path = usePathname();
@@ -27,17 +28,15 @@ export default function PlayGame() {
 
   const [toAdd, setToAdd] = useState<boolean>(false);
 
-  const [indicesSelected, setIndicesSelected] = useState<Array<number>>([]);
-
   const [prePlayRoundArgs, setPrePlayRoundArgs] = useState<{
     count: string | undefined;
   }>({
-    count: "5",
+    count: undefined,
   });
 
   const [playRoundArgs, setPlayRoundArgs] = useState<{
     playerIndex: string | undefined;
-    indicesArr: string | undefined;
+    indicesArr: Array<string> | undefined;
   }>({
     playerIndex: undefined,
     indicesArr: undefined,
@@ -52,6 +51,11 @@ export default function PlayGame() {
     toAdd: undefined,
     betAmount: undefined,
   });
+
+  const [args, saveArgs] = useLocalStorage<{
+    playerIndex: string | undefined;
+    indicesArr: Array<string> | undefined;
+  }>("args", { playerIndex: undefined, indicesArr: undefined });
 
   const unWatchReq = useContractEvent({
     address: gameAddr,
@@ -123,6 +127,10 @@ export default function PlayGame() {
     hash: prePlayData?.hash,
   });
 
+  const { playerIndexFromLs, indicesArrFromLs } = JSON.parse(
+    localStorage.getItem("args") ?? "{}",
+  );
+
   const {
     config: playRoundConfig,
     error: playRoundError,
@@ -133,8 +141,8 @@ export default function PlayGame() {
     functionName: "playRound",
     args: [
       // BigInt(playRoundArgs.playerIndex ?? ""),
-      BigInt(0),
-      [BigInt(0), BigInt(1), BigInt(2), BigInt(3), BigInt(4)],
+      BigInt(playerIndexFromLs ?? ""),
+      [...(indicesArrFromLs ?? [])?.map((i: any) => BigInt(i.toString()))],
     ],
   });
 
@@ -146,30 +154,35 @@ export default function PlayGame() {
   });
 
   const callPlayRound = async () => {
-    // TODO: Temp remove to check if random works
-    // if (
-    //   playRoundArgs.playerIndex == undefined ||
-    //   playRoundArgs.indicesArr == undefined
-    // ) {
-    //   toast.error("Please enter the required args");
-    //   return;
-    // }
+    const { playerIndex, indicesArr } = JSON.parse(
+      localStorage.getItem("args") ?? "{}",
+    );
 
-    const data = await playRoundWriteAsync?.();
+    if (playerIndex == undefined || indicesArr == undefined) {
+      toast.error("Please enter the required args");
+      return;
+    }
 
-    if (data?.hash) {
-      toast.success(
-        <div className="flex gap-2 justify-between">
-          <div className="font-bold">Playing Round</div>
-          <div className="text-sm text-slate-500 dark:text-slate-400 underline">
-            <a target="_blank" href={fetchExplorerLink(data?.hash!, "tx")}>
-              Explore Txn
-            </a>
-          </div>
-        </div>,
-      );
-    } else {
-      toast.error("something went wrong while playing round");
+    try {
+      const data = await playRoundWriteAsync?.();
+
+      if (data?.hash) {
+        toast.success(
+          <div className="flex gap-2 justify-between">
+            <div className="font-bold">Playing Round</div>
+            <div className="text-sm text-slate-500 dark:text-slate-400 underline">
+              <a target="_blank" href={fetchExplorerLink(data?.hash!, "tx")}>
+                Explore Txn
+              </a>
+            </div>
+          </div>,
+        );
+      } else {
+        toast.error("something went wrong while playing round");
+      }
+    } catch (e) {
+      console.log(e);
+      return;
     }
   };
 
@@ -179,21 +192,25 @@ export default function PlayGame() {
       return;
     }
 
-    const data = await prePlayWriteAsync?.();
-
-    if (data?.hash) {
-      toast.success(
-        <div className="flex gap-2 justify-between">
-          <div className="font-bold">Requesting for random numbers</div>
-          <div className="text-sm text-slate-500 dark:text-slate-400 underline">
-            <a target="_blank" href={fetchExplorerLink(data?.hash!, "tx")}>
-              Explore Txn
-            </a>
-          </div>
-        </div>,
-      );
-    } else {
-      toast.error("something went wrong while rolling dice");
+    try {
+      const data = await prePlayWriteAsync?.();
+      if (data?.hash) {
+        toast.success(
+          <div className="flex gap-2 justify-between">
+            <div className="font-bold">Requesting for random numbers</div>
+            <div className="text-sm text-slate-500 dark:text-slate-400 underline">
+              <a target="_blank" href={fetchExplorerLink(data?.hash!, "tx")}>
+                Explore Txn
+              </a>
+            </div>
+          </div>,
+        );
+      } else {
+        console.log(data);
+        toast.error("something went wrong while rolling dice");
+      }
+    } catch (e) {
+      console.log(e);
     }
   };
 
@@ -231,14 +248,41 @@ export default function PlayGame() {
   };
 
   const selectDice = (e: any) => {
-    const index = e.target.parentNode.getAttribute("data-keyid");
-    console.log(`${index} selected`);
-    if (index != null) {
-      setIndicesSelected((state) =>
-        state.includes(index)
-          ? [...state.filter((s) => s !== index)]
-          : [...state, index],
+    let diceIndex = e.target.parentNode.getAttribute("data-keyid");
+    let playerIndex =
+      e.target.parentNode.parentNode.parentNode.children[0].children[0].getAttribute(
+        "data-index",
       );
+
+    if (diceIndex != null) {
+      // console.log(`${diceIndex} selected from player ${playerIndex}`);
+      diceIndex = diceIndex.toString();
+      playerIndex = playerIndex.toString();
+
+      const newIndicesArr = playRoundArgs.indicesArr?.includes(diceIndex)
+        ? playRoundArgs.indicesArr?.filter((s) => s !== diceIndex)
+        : playRoundArgs.indicesArr ?? [];
+
+      setPrePlayRoundArgs({ count: newIndicesArr.length.toString() });
+
+      setPlayRoundArgs((state) =>
+        state.indicesArr?.includes(diceIndex)
+          ? {
+              indicesArr: [...newIndicesArr],
+              playerIndex,
+            }
+          : {
+              indicesArr: [...newIndicesArr, diceIndex],
+              playerIndex,
+            },
+      );
+
+      saveArgs({
+        indicesArr: newIndicesArr?.includes(diceIndex)
+          ? [...newIndicesArr]
+          : [...newIndicesArr, diceIndex],
+        playerIndex: playerIndex,
+      });
     }
   };
 
@@ -267,7 +311,9 @@ export default function PlayGame() {
                 >
                   <div className="flex gap-4">
                     <div>
-                      <h2>Player {playerAddr}</h2>
+                      <h2 data-index={index}>
+                        Player #{index} {playerAddr}
+                      </h2>
                       <p className="text-sm text-slate-500 dark:text-slate-400"></p>
                       <div className="flex gap-2 mt-4 justify-around">
                         <div className="flex item-center align-middle gap-2">
@@ -299,9 +345,15 @@ export default function PlayGame() {
                     </div>
                     <div className="flex gap-4" onClick={selectDice}>
                       {hand.map((face, index) => (
-                        <div key={face + Math.random()} data-keyid={index}>
+                        <div
+                          key={face + Math.random()}
+                          data-keyid={index}
+                          className="flex flex-col items-center gap-2 "
+                        >
                           {diceFaceToString(parseInt(face.toString()))}
-                          {indicesSelected.includes(index) && <Check />}
+                          {playRoundArgs.indicesArr?.includes(
+                            index.toString(),
+                          ) && <Check />}
                         </div>
                       ))}
                     </div>
@@ -371,11 +423,13 @@ export default function PlayGame() {
                               disabled={!prePlayWriteAsync}
                               onClick={callPrePlay}
                             >
-                              {isPrePlayLoading || isPlayRoundLoading
+                              {(playRoundArgs.indicesArr ?? []).length == 0
+                                ? "Select dice to roll"
+                                : isPrePlayLoading || isPlayRoundLoading
                                 ? "Rolling Dice"
                                 : "Roll Dice"}
-                              {indicesSelected.length != 0 &&
-                                ` - ${indicesSelected.toString()}`}
+                              {(playRoundArgs.indicesArr ?? []).length != 0 &&
+                                ` - ${playRoundArgs.indicesArr?.toString()}`}
                             </Button>
                           </div>
                         </div>
@@ -386,17 +440,17 @@ export default function PlayGame() {
               );
             })}
         </main>
+        {/* Prepare Error */}
+        {(isChangeBetError || changeBetError) && (
+          <div>Error: {(changeBetError || changeBetError)?.message}</div>
+        )}
+        {(isPrePlayError || prePlayError) && (
+          <div>Error: {(prePlayError || prePlayError)?.message}</div>
+        )}
+        {(isPlayRoundError || playRoundError) && (
+          <div>Error: {(playRoundError || playRoundError)?.message}</div>
+        )}
       </div>
-      {/* Prepare Error */}
-      {(isChangeBetError || changeBetError) && (
-        <div>Error: {(changeBetError || changeBetError)?.message}</div>
-      )}
-      {(isPrePlayError || prePlayError) && (
-        <div>Error: {(prePlayError || prePlayError)?.message}</div>
-      )}
-      {(isPlayRoundError || playRoundError) && (
-        <div>Error: {(playRoundError || playRoundError)?.message}</div>
-      )}
     </div>
   );
 }
