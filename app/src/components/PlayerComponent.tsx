@@ -3,9 +3,10 @@
 import { diceFaceToString, fetchExplorerLink } from "@/libs/utils";
 import { formatEther, parseEther } from "viem";
 import { Button } from "./ui/button";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocalStorage } from "@uidotdev/usehooks";
 import {
+  useAccount,
   useContractEvent,
   useContractWrite,
   usePrepareContractWrite,
@@ -17,6 +18,8 @@ import { toast } from "sonner";
 import { Check } from "lucide-react";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
+import { usePathname } from "next/navigation";
+import { usePlayerState } from "@/store/usePlayerState";
 
 export default function PlayerComponent({
   playerAddr,
@@ -27,12 +30,18 @@ export default function PlayerComponent({
 }: any) {
   const hand = rawHand.toString().split(",") as Array<number>;
 
+  const firstRoll = hand.every((h) => h == 0);
+
+  const pathName = usePathname();
+  const gameAddrFromPathName =
+    ((pathName?.split("/")?.[2] ?? "") as `0x${string}`) ?? undefined;
+
   const [toAdd, setToAdd] = useState<boolean>(false);
 
   const [prePlayRoundArgs, setPrePlayRoundArgs] = useState<{
     count: string | undefined;
   }>({
-    count: undefined,
+    count: firstRoll ? "5" : undefined,
   });
 
   const [playRoundArgs, setPlayRoundArgs] = useState<{
@@ -58,7 +67,17 @@ export default function PlayerComponent({
     indicesArr: Array<string> | undefined;
   }>("args", { playerIndex: undefined, indicesArr: undefined });
 
-  const gameAddr = useGameStateStore((state) => state.gameAddress);
+  const { address } = useAccount();
+
+  // cast send 0xED6dF241daeBd2B5816531c8b6b2C62b8734bfF2 \
+  // --rpc-url $PROVIDER_URL \
+  // --private-key 9a681567d8a557c23e6418c9596a5596a241d028c4b19b4d2e207edc071116f2 \
+  // "playRound(uint256,bool[5])" \
+  // 1,"[true, true, true, true, true]"
+  
+
+  const gameAddr =
+    useGameStateStore((state) => state.gameAddress) ?? gameAddrFromPathName;
 
   const unWatchReq = useContractEvent({
     address: gameAddr,
@@ -113,7 +132,8 @@ export default function PlayerComponent({
     address: gameAddr,
     abi,
     functionName: "prePlayRound",
-    args: [BigInt(prePlayRoundArgs.count ?? "")],
+    args: firstRoll ? [BigInt("5")] : [BigInt(prePlayRoundArgs.count ?? "")],
+    // args: [BigInt("5")],
   });
 
   const { data: prePlayData, writeAsync: prePlayWriteAsync } =
@@ -123,22 +143,33 @@ export default function PlayerComponent({
     hash: prePlayData?.hash,
   });
 
-  const { playerIndexFromLs, indicesArrFromLs } = JSON.parse(
-    localStorage.getItem("args") ?? "{}",
+  const { playerIndex, indicesArr } = JSON.parse(
+    localStorage.getItem("args") ?? '{"indicesArr": []}',
+  );
+
+  const newIndicesArr: [boolean, boolean, boolean, boolean, boolean] = [
+    false,
+    false,
+    false,
+    false,
+    false,
+  ];
+  (indicesArr ?? []).forEach(
+    (d: string) => (newIndicesArr[parseInt(d)] = true),
   );
 
   const {
     config: playRoundConfig,
     error: playRoundError,
     isError: isPlayRoundError,
+    refetch,
   } = usePrepareContractWrite({
     address: gameAddr,
     abi,
     functionName: "playRound",
     args: [
-      // BigInt(playRoundArgs.playerIndex ?? ""),
-      BigInt(playerIndexFromLs ?? ""),
-      [...(indicesArrFromLs ?? [])?.map((i: any) => BigInt(i.toString()))],
+      BigInt(index),
+      firstRoll ? [true, true, true, true, true] : [true, true, true, true, true],
     ],
   });
 
@@ -174,6 +205,7 @@ export default function PlayerComponent({
           </div>,
         );
       } else {
+        console.log(data);
         toast.error("something went wrong while playing round");
       }
     } catch (e) {
@@ -337,7 +369,9 @@ export default function PlayerComponent({
             ))}
           </div>
         </div>
-        {parseInt(turn) < 2 ? (
+        {address != playerAddr ? (
+          <></>
+        ) : parseInt(turn) < 2 ? (
           <div>
             <div className="space-y-4">
               <div className="space-y-1">
@@ -391,8 +425,10 @@ export default function PlayerComponent({
                     >
                       {isChangeBetLoading ? "Adjusting Bet" : "Adjust Bet"}
                     </Button>
-                    <Button disabled={!prePlayWriteAsync} onClick={callPrePlay}>
-                      {(playRoundArgs.indicesArr ?? []).length == 0
+                    <Button onClick={callPrePlay}>
+                      {firstRoll
+                        ? "First roll"
+                        : (playRoundArgs.indicesArr ?? []).length == 0
                         ? "Select dice to roll"
                         : isPrePlayLoading || isPlayRoundLoading
                         ? "Rolling Dice"

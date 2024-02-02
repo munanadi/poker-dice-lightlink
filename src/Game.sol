@@ -250,7 +250,7 @@ contract Game is RrpRequesterV0 {
     ///  @dev this function is called from the player, this will play a round lock in his hand, roll dice
     ///  @param _playerIndex is the index of the player
     ///  @param _indicesOfDice are the index of dice that are (re)rolled
-    function playRound(uint256 _playerIndex, uint256[] memory _indicesOfDice) external {
+    function playRound(uint256 _playerIndex, bool[5] memory _indicesOfDice) external {
         // Player playing his own turn?
         if (playerState[_playerIndex].playerAddr != msg.sender) {
             revert NotAuthorized();
@@ -266,7 +266,7 @@ contract Game is RrpRequesterV0 {
         uint256[] memory listOfRandomDice;
 
         // It should call the _rollDice fn that will give new random values to the palyer
-        uint256 numberOfDiceToRoll = _indicesOfDice.length;
+        // uint256 numberOfDiceToRoll = _indicesOfDice.length;
         // listOfRandomDice = _rollDice(numberOfDiceToRoll);
         listOfRandomDice = this.getRandomNumberArray();
 
@@ -274,9 +274,10 @@ contract Game is RrpRequesterV0 {
         playerState[_playerIndex].turn += 1;
         uint256[] storage playersHand = playerState[_playerIndex].hand;
 
-        for (uint256 i = 0; i < numberOfDiceToRoll; i++) {
-            uint256 indexToChange = _indicesOfDice[i];
-            playersHand[indexToChange] = (listOfRandomDice[i] % 6) + 1; // 6 faces, 0 discarded
+        for (uint256 i = 0; i < 5; i++) {
+            if (_indicesOfDice[i]) {
+                playersHand[i] = (listOfRandomDice[i] % 6) + 1; // 6 faces, 0 discarded
+            }
         }
 
         // Update the game state
@@ -418,8 +419,8 @@ contract Game is RrpRequesterV0 {
         }
         return playerState[_playerIndex].bet;
     }
-    
-    function getPlayerDetails(uint256 _playerIndex) public view returns(Player memory){
+
+    function getPlayerDetails(uint256 _playerIndex) public view returns (Player memory) {
         if (_playerIndex >= s_totalNumberOfPlayers) {
             revert PlayerIndexNotExist(_playerIndex);
         }

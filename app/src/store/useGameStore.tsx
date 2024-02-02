@@ -1,11 +1,11 @@
 import { create } from "zustand";
 
 type State = {
-  currentCountOfPlayers: number;
-  totalCountOfPlayers: number;
-  totalBet: number;
-  gameState: number;
-  gameAddress: `0x${string}`;
+  currentCountOfPlayers: number | undefined;
+  totalCountOfPlayers: number | undefined;
+  totalBet: number | undefined;
+  gameState: number | undefined;
+  gameAddress: `0x${string}` | undefined;
 };
 
 type Action = {
@@ -13,10 +13,10 @@ type Action = {
 };
 
 export const useGameStateStore = create<State & Action>((set) => ({
-  currentCountOfPlayers: 0,
-  totalBet: 0,
-  totalCountOfPlayers: 0,
-  gameState: -1,
-  gameAddress: "0x",
+  currentCountOfPlayers: undefined,
+  totalBet: undefined,
+  totalCountOfPlayers: undefined,
+  gameState: undefined,
+  gameAddress: undefined,
   setGameState: (gameState: State) => set(() => ({ ...gameState })),
 }));

@@ -8,6 +8,7 @@ import {
 import { parseEther } from "viem";
 
 import { abi } from "@/libs/abi";
+import { isAddress } from "ethers/lib/utils";
 
 export const useJoinGame = (contractAdd: `0x${string}`) => {
   const { config, error, isError } = usePrepareContractWrite({
@@ -51,6 +52,13 @@ export const useGetAllPlayerDetails = (
     contracts: [...readObjs],
   });
 
+  if (data && data.every((d) => d.status == "failure")) {
+    return {
+      allPlayerDetails: undefined,
+      error: "no players yet",
+    };
+  }
+
   if (error) {
     return {
       allPlayerDetails: undefined,
@@ -65,6 +73,11 @@ export const useGetAllPlayerDetails = (
 };
 
 export const useGameStateReads = (contractAdd: `0x${string}`) => {
+  let gameState: string | undefined = undefined;
+  let currentCountOfPlayers: string | undefined = undefined;
+  let totalCountOfPlayers: string | undefined = undefined;
+  let getTotalPrizePool: string | undefined = undefined;
+
   const gameContract = {
     address: contractAdd,
     abi: abi,
@@ -91,6 +104,20 @@ export const useGameStateReads = (contractAdd: `0x${string}`) => {
     ],
   });
 
+  if (
+    contractAdd == "0x" ||
+    contractAdd == ("" as string) ||
+    !isAddress(contractAdd)
+  ) {
+    return {
+      gameState,
+      currentCountOfPlayers,
+      totalCountOfPlayers,
+      getTotalPrizePool,
+      error: "enter valid address",
+    };
+  }
+
   if (data && data.every((d) => d.status == "failure")) {
     // All fetches failed, cannot be a game.
     return {
@@ -100,9 +127,7 @@ export const useGameStateReads = (contractAdd: `0x${string}`) => {
       getTotalPrizePool: undefined,
       error: "not a game",
     };
-  }
-
-  if (!data) {
+  } else if (error) {
     return {
       gameState: undefined,
       currentCountOfPlayers: undefined,
@@ -110,12 +135,12 @@ export const useGameStateReads = (contractAdd: `0x${string}`) => {
       getTotalPrizePool: undefined,
       error,
     };
+  } else if (data && data.every((d) => d.status == "success")) {
+    gameState = (data[0].result ?? "").toString();
+    currentCountOfPlayers = (data[1].result ?? "").toString();
+    totalCountOfPlayers = (data[2].result ?? "").toString();
+    getTotalPrizePool = (data[3].result ?? "").toString();
   }
-
-  const gameState = data[0].status == "success" && data[0].result;
-  const currentCountOfPlayers = data[0].status == "success" && data[1].result;
-  const totalCountOfPlayers = data[0].status == "success" && data[2].result;
-  const getTotalPrizePool = data[0].status == "success" && data[3].result;
 
   return {
     gameState,

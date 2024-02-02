@@ -17,7 +17,11 @@ import {
 } from "@/components/ui/card";
 import { ArrowLeftIcon, Loader2 } from "lucide-react";
 import { useEffect } from "react";
-import { useGetAllPlayerDetails, useJoinGame } from "@/libs/contractHelpers";
+import {
+  useGameStateReads,
+  useGetAllPlayerDetails,
+  useJoinGame,
+} from "@/libs/contractHelpers";
 import { useAccount } from "wagmi";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
@@ -42,33 +46,36 @@ export default function JoinGame({ params }: { params: { gameAddr: string } }) {
     callJoinPrepareError,
   } = useJoinGame(gameAddr);
 
-  const { currentCountOfPlayers, gameState, totalBet, totalCountOfPlayers } =
-    useGameStateStore();
+  const {
+    currentCountOfPlayers,
+    error: gameStateError,
+    gameState,
+    getTotalPrizePool,
+    totalCountOfPlayers,
+  } = useGameStateReads(gameAddr);
 
-  const { allPlayerDetails } = useGetAllPlayerDetails(
+  const { allPlayerDetails, error } = useGetAllPlayerDetails(
     gameAddr,
     parseInt(totalCountOfPlayers?.toString() || "0"),
   );
 
+  const playerDetails = error == "no players yet" ? [] : allPlayerDetails;
+
   // If this is -1, the current account is not playing this game
-  const currentPlayerIndex = allPlayerDetails?.findIndex(
-    (player) => (player?.result as any)?.playerAddr == address,
-  );
+  const isCurrentAdressInGame =
+    (playerDetails ?? []).findIndex(
+      (player) => (player?.result as any)?.playerAddr == address,
+    ) != -1;
 
   useEffect(() => {
-    setPlayers(
-      allPlayerDetails
-        ?.filter((d) => parseInt((d.result as any).playerAddr?.slice(2)) != 0)
-        ?.map((d) => d.result as any),
+    const nonZeroPlayers = (playerDetails ?? [])?.filter(
+      (d) => parseInt((d.result as any)?.playerAddr?.slice(2)) != 0,
     );
-  }, [gameAddr, totalCountOfPlayers]);
 
-  useEffect(() => {
-    if (currentPlayerIndex != -1) {
-      push(`/game/${gameAddr}/play`);
-      return;
-    }
-  }, [currentPlayerIndex]);
+    const players = nonZeroPlayers?.map((d) => d?.result as any);
+
+    setPlayers(players);
+  }, [gameAddr, totalCountOfPlayers, allPlayerDetails]);
 
   useEffect(() => {
     if (callJoinGameSuccess) {
@@ -79,6 +86,7 @@ export default function JoinGame({ params }: { params: { gameAddr: string } }) {
   }, [callJoinGameSuccess]);
 
   const joinGame = async () => {
+    console.log("join game function was called.");
     if (callJoinIsPrepareError) {
       toast.error("prepare contract for joingame error");
       return;
@@ -90,6 +98,20 @@ export default function JoinGame({ params }: { params: { gameAddr: string } }) {
       console.log(e);
     }
   };
+
+  const takeToPlayScreen = () => {
+    push(`/game/${gameAddr}/play`);
+    return;
+  };
+
+  const nonZeroPlayers: any = (playerDetails ?? [])?.filter(
+    (d) => parseInt((d.result as any)?.playerAddr?.slice(2)) != 0,
+  );
+
+  const players =
+    nonZeroPlayers.length != 0
+      ? nonZeroPlayers?.map((d: any) => d?.result as any)
+      : [];
 
   return (
     <div className="container">
@@ -120,7 +142,7 @@ export default function JoinGame({ params }: { params: { gameAddr: string } }) {
                 <div className="grid gap-4">
                   <div className="flex items-center gap-2">
                     <div className="font-semibold">Game State:</div>
-                    <div>{gameStateToString(gameState)}</div>
+                    <div>{gameStateToString(parseInt(gameState!))}</div>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="font-semibold">Players Joined:</div>
@@ -143,17 +165,26 @@ export default function JoinGame({ params }: { params: { gameAddr: string } }) {
                 </div>
               </CardContent>
               <CardFooter className="flex items-center gap-2">
-                <Button size="sm" onClick={joinGame}>
-                  {!callJoinGameLoading ? (
-                    "Join Game"
-                  ) : (
-                    <>
-                      <Loader2 className="h-10 w-10 animate-spin" />
-                      <p>Joining Game</p>
-                    </>
-                  )}
-                </Button>
-                <Button disabled size="sm" variant="outline">
+                {!isCurrentAdressInGame ? (
+                  <Button size="sm" onClick={joinGame}>
+                    {!callJoinGameLoading ? (
+                      "Join Game"
+                    ) : (
+                      <>
+                        <Loader2 className="h-10 w-10 animate-spin" />
+                        <p>Joining Game</p>
+                      </>
+                    )}
+                  </Button>
+                ) : (
+                  <Button onClick={takeToPlayScreen}>Play!</Button>
+                )}
+                <Button
+                  disabled
+                  size="sm"
+                  className="cursor-not-allowed"
+                  variant="outline"
+                >
                   Spectate Game
                 </Button>
               </CardFooter>
@@ -163,40 +194,31 @@ export default function JoinGame({ params }: { params: { gameAddr: string } }) {
             <Card>
               <div>
                 <CardHeader className="flex flex-row items-center space-y-0">
-                  <CardTitle>Game Owner</CardTitle>
-                </CardHeader>
-                <CardContent className="text-sm">
-                  {/* TODO:  */}
-                  <div className="grid gap-1">Owner Addr goes here</div>
-                </CardContent>
-              </div>
-              <Separator />
-              <div>
-                <CardHeader className="flex flex-row items-center space-y-0">
                   <CardTitle>Players in this game</CardTitle>
                 </CardHeader>
                 <CardContent className="text-sm">
-                  {allPlayerDetails
-                    ?.filter(
-                      (p) =>
-                        parseInt((p.result as any)?.playerAddr?.slice(2)) != 0,
-                    )
-                    .map((player, i) => (
-                      <div key={(player?.result as any)?.playerAddr + i}>
+                  {players?.length == 0 ? (
+                    <div className="text-md text-gray-400">
+                      Players are yet to join!
+                    </div>
+                  ) : (
+                    players?.map((player: any, i: number) => (
+                      <div key={(player as any)?.playerAddr}>
                         <Link
                           className="grid gap-1 underline"
                           target="_blank"
                           href={fetchExplorerLink(
-                            (player?.result as any)?.playerAddr,
+                            (player as any)?.playerAddr,
                             "add",
                           )}
                         >
                           {shortenAddressLink(
-                            (player?.result as any)?.playerAddr ?? "",
+                            (player as any)?.playerAddr ?? "",
                           )}
                         </Link>
                       </div>
-                    ))}
+                    ))
+                  )}
                 </CardContent>
               </div>
             </Card>

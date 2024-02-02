@@ -228,8 +228,8 @@ export const abi = [
       },
       {
         name: "_indicesOfDice",
-        type: "uint256[]",
-        internalType: "uint256[]",
+        type: "bool[5]",
+        internalType: "bool[5]",
       },
     ],
     outputs: [],
