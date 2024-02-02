@@ -90,6 +90,7 @@ export default function FindGame() {
         currentCountOfPlayers: parseInt(currentCountOfPlayers ?? "-1"),
         gameState: parseInt(gameState ?? "-1"),
         totalCountOfPlayers: parseInt(totalCountOfPlayers ?? "-1"),
+        gameAddress: debouncedGameAddr,
       });
       // redirect to /game/0xaddress.
       push(`/game/${gameAddr}`);

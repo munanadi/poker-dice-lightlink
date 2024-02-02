@@ -5,6 +5,7 @@ type State = {
   totalCountOfPlayers: number;
   totalBet: number;
   gameState: number;
+  gameAddress: `0x${string}`;
 };
 
 type Action = {
@@ -16,5 +17,6 @@ export const useGameStateStore = create<State & Action>((set) => ({
   totalBet: 0,
   totalCountOfPlayers: 0,
   gameState: -1,
+  gameAddress: "0x",
   setGameState: (gameState: State) => set(() => ({ ...gameState })),
 }));
