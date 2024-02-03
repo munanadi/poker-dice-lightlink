@@ -151,8 +151,8 @@ export const abi = [
           },
           {
             name: "hand",
-            type: "uint256[]",
-            internalType: "uint256[]",
+            type: "uint256[5]",
+            internalType: "uint256[5]",
           },
           { name: "bet", type: "uint256", internalType: "uint256" },
           { name: "turn", type: "uint256", internalType: "uint256" },

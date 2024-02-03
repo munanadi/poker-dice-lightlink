@@ -27,6 +27,7 @@ import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import { useGameStateStore } from "@/store/useGameStore";
 import { userPlayerDetailsStore } from "@/store/usePlayerDetailsStore";
+import { parseAbiParameter } from "viem";
 
 export default function JoinGame({ params }: { params: { gameAddr: string } }) {
   const gameAddr = `0x${params.gameAddr.slice(2)}` as const;
@@ -61,6 +62,10 @@ export default function JoinGame({ params }: { params: { gameAddr: string } }) {
 
   const playerDetails = error == "no players yet" ? [] : allPlayerDetails;
 
+  const isGameAtCapacity =
+    parseInt(currentCountOfPlayers ?? "0") ==
+    parseInt(totalCountOfPlayers ?? "1");
+
   // If this is -1, the current account is not playing this game
   const isCurrentAdressInGame =
     (playerDetails ?? []).findIndex(
@@ -77,14 +82,6 @@ export default function JoinGame({ params }: { params: { gameAddr: string } }) {
     setPlayers(players);
   }, [gameAddr, totalCountOfPlayers, allPlayerDetails]);
 
-  useEffect(() => {
-    if (callJoinGameSuccess) {
-      toast.success(`Game joined!`, {
-        description: fetchExplorerLink(callJoinData?.hash!, "tx"),
-      });
-    }
-  }, [callJoinGameSuccess]);
-
   const joinGame = async () => {
     console.log("join game function was called.");
     if (callJoinIsPrepareError) {
@@ -93,7 +90,23 @@ export default function JoinGame({ params }: { params: { gameAddr: string } }) {
     }
 
     try {
-      await callJoinGame?.();
+      const data = await callJoinGame?.();
+
+      if (data?.hash) {
+        toast.success(
+          <div className="flex gap-2 justify-between">
+            <div className="font-bold">Joining Game</div>
+            <div className="text-sm text-slate-500 dark:text-slate-400 underline">
+              <a target="_blank" href={fetchExplorerLink(data?.hash!, "tx")}>
+                Explore Txn
+              </a>
+            </div>
+          </div>,
+        );
+      } else {
+        console.log(data);
+        toast.error("something went wrong while joining game");
+      }
     } catch (e: any) {
       console.log(e);
     }
@@ -165,7 +178,13 @@ export default function JoinGame({ params }: { params: { gameAddr: string } }) {
                 </div>
               </CardContent>
               <CardFooter className="flex items-center gap-2">
-                {!isCurrentAdressInGame ? (
+                {isCurrentAdressInGame ? (
+                  <Button onClick={takeToPlayScreen}>Play!</Button>
+                ) : isGameAtCapacity ? (
+                  <Button variant={"destructive"} disabled>
+                    Game Full!
+                  </Button>
+                ) : (
                   <Button size="sm" onClick={joinGame}>
                     {!callJoinGameLoading ? (
                       "Join Game"
@@ -176,8 +195,6 @@ export default function JoinGame({ params }: { params: { gameAddr: string } }) {
                       </>
                     )}
                   </Button>
-                ) : (
-                  <Button onClick={takeToPlayScreen}>Play!</Button>
                 )}
                 <Button
                   disabled
@@ -225,15 +242,6 @@ export default function JoinGame({ params }: { params: { gameAddr: string } }) {
           </div>
         </div>
       </main>
-
-      {callJoinGameSuccess && (
-        <div>
-          Successfully Joined the game!
-          <div>
-            <a href={fetchExplorerLink(callJoinData?.hash!, "tx")}>Txn Link</a>
-          </div>
-        </div>
-      )}
 
       {/* Prepare Error */}
       {(callJoinIsPrepareError || callJoinPrepareError) && (

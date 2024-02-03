@@ -3,7 +3,7 @@ pragma solidity ^0.8.9;
 
 import {console} from "forge-std/Console.sol";
 import {RrpRequesterV0} from "@api3/airnode-protocol/contracts/rrp/requesters/RrpRequesterV0.sol";
-import {SortLib} from "./library/SortLib.sol";
+import {SortLib, SortLib5} from "./library/SortLib.sol";
 
 ///  @title Contract that represents a game of dice poker
 ///  @author Munanadi - Beginner
@@ -120,6 +120,7 @@ contract Game is RrpRequesterV0 {
     //////// GAME
 
     using SortLib for uint256[];
+    using SortLib5 for uint256[5];
 
     //-------- Errors
     error GameAtCapacity();
@@ -173,7 +174,7 @@ contract Game is RrpRequesterV0 {
         /// address of the player
         address playerAddr;
         /// hand chosen in the current round
-        uint256[] hand;
+        uint256[5] hand;
         /// bet amount
         uint256 bet;
         /// turn player played
@@ -200,6 +201,15 @@ contract Game is RrpRequesterV0 {
         emit GameStarted(s_totalNumberOfPlayers);
 
         s_gameState = GameState.WaitingOnPlayersToJoin;
+        s_totalBets = 0;
+        s_currentCountOfPlayers = 0;
+
+        // Add the player, Everyone starts with a 0 (No cards on them)
+        uint256[5] memory startingHand = [uint256(0), uint256(0), uint256(0), uint256(0), uint256(0)];
+
+        for (uint256 i = 0; i < _numberOfPlayers; i++) {
+            playerState[i] = Player({index: i, playerAddr: address(0), hand: startingHand, bet: 0, turn: 0});
+        }
     }
 
     ///  @dev This is called to join the game that was started
@@ -217,16 +227,11 @@ contract Game is RrpRequesterV0 {
 
         s_totalBets += msg.value;
 
-        // Add the player, Everyone starts with a 0 (No cards on them)
-        uint256[] memory startingHand = new uint256[](5);
+        Player storage newPlayer = playerState[s_currentCountOfPlayers];
 
-        Player memory newPlayer = Player({
-            index: s_currentCountOfPlayers,
-            playerAddr: msg.sender,
-            hand: startingHand,
-            bet: msg.value,
-            turn: 0
-        });
+        newPlayer.bet = msg.value;
+        newPlayer.index = s_currentCountOfPlayers;
+        newPlayer.playerAddr = msg.sender;
 
         emit PlayerAdded(msg.sender, s_currentCountOfPlayers);
 
@@ -270,13 +275,20 @@ contract Game is RrpRequesterV0 {
         // listOfRandomDice = _rollDice(numberOfDiceToRoll);
         listOfRandomDice = this.getRandomNumberArray();
 
+        if (listOfRandomDice.length == 0) {
+            revert("random array not set");
+        }
+
         // Update the player state to DoneWithTurn
         playerState[_playerIndex].turn += 1;
-        uint256[] storage playersHand = playerState[_playerIndex].hand;
+        uint256[5] storage playersHand = playerState[_playerIndex].hand;
+
+        uint256 j = 0;
 
         for (uint256 i = 0; i < 5; i++) {
             if (_indicesOfDice[i]) {
-                playersHand[i] = (listOfRandomDice[i] % 6) + 1; // 6 faces, 0 discarded
+                playersHand[i] = (listOfRandomDice[j] % 6) + 1; // 6 faces, 0 discarded
+                j++;
             }
         }
 
@@ -341,11 +353,11 @@ contract Game is RrpRequesterV0 {
         playerRanks.sort();
 
         // TODO: Returns max of one player, need to change this for ties
-        return playerRanks[playerRanks.length - 1];
+        return playerRanks[0];
     }
 
     /// @dev this function goes through a hand and returns the rank of that particular hand
-    function evaluvateHand(uint256[] memory hand) internal returns (Ranks) {
+    function evaluvateHand(uint256[5] memory hand) internal returns (Ranks) {
         // sort the hand
         hand.sort();
 
@@ -369,19 +381,19 @@ contract Game is RrpRequesterV0 {
         }
     }
 
-    function isFiveOfAKind(uint256[] memory hand) internal pure returns (bool) {
+    function isFiveOfAKind(uint256[5] memory hand) internal pure returns (bool) {
         return hand[0] == hand[4];
     }
 
-    function isFourOfAKind(uint256[] memory hand) internal pure returns (bool) {
+    function isFourOfAKind(uint256[5] memory hand) internal pure returns (bool) {
         return hand[0] == hand[3] || hand[1] == hand[4];
     }
 
-    function isThreeOfAKind(uint256[] memory hand) internal pure returns (bool) {
+    function isThreeOfAKind(uint256[5] memory hand) internal pure returns (bool) {
         return (hand[0] == hand[2]) || (hand[1] == hand[3]) || (hand[2] == hand[4]);
     }
 
-    function isStraight(uint256[] memory hand) internal pure returns (bool) {
+    function isStraight(uint256[5] memory hand) internal pure returns (bool) {
         for (uint256 i = 0; i < 4; i++) {
             if (hand[i] + 1 != hand[i + 1]) {
                 return false;
@@ -390,16 +402,16 @@ contract Game is RrpRequesterV0 {
         return true;
     }
 
-    function isFullHouse(uint256[] memory hand) internal pure returns (bool) {
+    function isFullHouse(uint256[5] memory hand) internal pure returns (bool) {
         return (hand[0] == hand[2] && hand[3] == hand[4]) || (hand[0] == hand[1] && hand[2] == hand[4]);
     }
 
-    function isTwoPair(uint256[] memory hand) internal pure returns (bool) {
+    function isTwoPair(uint256[5] memory hand) internal pure returns (bool) {
         return (hand[0] == hand[1] && hand[2] == hand[3]) || (hand[0] == hand[1] && hand[3] == hand[4])
             || (hand[1] == hand[2] && hand[3] == hand[4]);
     }
 
-    function isPair(uint256[] memory hand) internal pure returns (bool) {
+    function isPair(uint256[5] memory hand) internal pure returns (bool) {
         return (hand[0] == hand[1]) || (hand[1] == hand[2]) || (hand[2] == hand[3]) || (hand[3] == hand[4]);
     }
 

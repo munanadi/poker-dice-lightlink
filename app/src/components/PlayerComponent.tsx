@@ -1,13 +1,14 @@
 "use client";
 
 import { diceFaceToString, fetchExplorerLink } from "@/libs/utils";
-import { formatEther, parseEther } from "viem";
+import { decodeErrorResult, formatEther, parseEther } from "viem";
 import { Button } from "./ui/button";
 import { useEffect, useState } from "react";
 import { useLocalStorage } from "@uidotdev/usehooks";
 import {
   useAccount,
   useContractEvent,
+  useContractRead,
   useContractWrite,
   usePrepareContractWrite,
   useWaitForTransaction,
@@ -30,7 +31,7 @@ export default function PlayerComponent({
 }: any) {
   const hand = rawHand.toString().split(",") as Array<number>;
 
-  const firstRoll = hand.every((h) => h == 0);
+  const isFirstRoll = hand.every((h) => h == 0);
 
   const pathName = usePathname();
   const gameAddrFromPathName =
@@ -38,10 +39,12 @@ export default function PlayerComponent({
 
   const [toAdd, setToAdd] = useState<boolean>(false);
 
+  const [requestArrArgs, setRequestArrArgs] = useState<`0x${string}`>("0x");
+
   const [prePlayRoundArgs, setPrePlayRoundArgs] = useState<{
     count: string | undefined;
   }>({
-    count: firstRoll ? "5" : undefined,
+    count: isFirstRoll ? "5" : undefined,
   });
 
   const [playRoundArgs, setPlayRoundArgs] = useState<{
@@ -69,38 +72,34 @@ export default function PlayerComponent({
 
   const { address } = useAccount();
 
-  // cast send 0xED6dF241daeBd2B5816531c8b6b2C62b8734bfF2 \
-  // --rpc-url $PROVIDER_URL \
-  // --private-key 9a681567d8a557c23e6418c9596a5596a241d028c4b19b4d2e207edc071116f2 \
-  // "playRound(uint256,bool[5])" \
-  // 1,"[true, true, true, true, true]"
-  
-
   const gameAddr =
     useGameStateStore((state) => state.gameAddress) ?? gameAddrFromPathName;
 
-  const unWatchReq = useContractEvent({
-    address: gameAddr,
-    abi: abi,
-    eventName: "RequestedUint256Array",
-    listener(log) {
-      const receivedReqId = log[0].args.requestId ?? "";
-      console.log(`fired request : ${receivedReqId}`);
-      unWatchReq?.();
-    },
-  });
+  // const unWatchReq = useContractEvent({
+  //   address: gameAddr,
+  //   abi: abi,
+  //   eventName: "RequestedUint256Array",
+  //   listener(log) {
+  //     const receivedReqId = log[0].args.requestId ?? "";
+  //     console.log(`fired request : ${receivedReqId}`);
+  //     toast.info(`fired request : ${receivedReqId}`);
+  //     unWatchReq?.();
+  //   },
+  // });
 
-  useContractEvent({
-    address: gameAddr,
-    abi: abi,
-    eventName: "ReceivedUint256Array",
-    listener(log) {
-      const receivedReqId = log[0].args.requestId ?? "";
-      console.log(`${receivedReqId} req is fulfilled`);
-      // Call the actual play round here.
-      callPlayRound();
-    },
-  });
+  // const unWatchReceived = useContractEvent({
+  //   address: gameAddr,
+  //   abi: abi,
+  //   eventName: "ReceivedUint256Array",
+  //   listener(log) {
+  //     const receivedReqId = log[0].args.requestId ?? "";
+  //     console.log(`${receivedReqId} req is fulfilled`);
+  //     toast.info(`${receivedReqId} req is fulfilled`);
+  //     // Call the actual play round here.
+  //     // callPlayRound();
+  //     unWatchReceived?.();
+  //   },
+  // });
 
   const {
     config: changeBetConfig,
@@ -132,7 +131,7 @@ export default function PlayerComponent({
     address: gameAddr,
     abi,
     functionName: "prePlayRound",
-    args: firstRoll ? [BigInt("5")] : [BigInt(prePlayRoundArgs.count ?? "")],
+    args: isFirstRoll ? [BigInt("5")] : [BigInt(prePlayRoundArgs.count ?? "")],
     // args: [BigInt("5")],
   });
 
@@ -157,19 +156,21 @@ export default function PlayerComponent({
   (indicesArr ?? []).forEach(
     (d: string) => (newIndicesArr[parseInt(d)] = true),
   );
+  console.log({ newIndicesArr });
 
   const {
     config: playRoundConfig,
     error: playRoundError,
     isError: isPlayRoundError,
-    refetch,
+    refetch: playRoundRefetch,
   } = usePrepareContractWrite({
     address: gameAddr,
     abi,
     functionName: "playRound",
     args: [
       BigInt(index),
-      firstRoll ? [true, true, true, true, true] : [true, true, true, true, true],
+      // [true, true, true, true, true],
+      isFirstRoll ? [true, true, true, true, true] : (newIndicesArr as any),
     ],
   });
 
@@ -180,7 +181,21 @@ export default function PlayerComponent({
     hash: playRoundData?.hash,
   });
 
+  const {
+    data: requestArrData,
+    error: requestArrError,
+    refetch: requestArrRefetch,
+  } = useContractRead({
+    abi,
+    address: gameAddr,
+    functionName: "expectingRequestWithIdToBeFulfilled",
+    args: [requestArrArgs],
+  });
+
   const callPlayRound = async () => {
+    const data = await playRoundRefetch();
+    data.refetch();
+
     const { playerIndex, indicesArr } = JSON.parse(
       localStorage.getItem("args") ?? "{}",
     );
@@ -189,6 +204,9 @@ export default function PlayerComponent({
       toast.error("Please enter the required args");
       return;
     }
+
+    console.log({ playerIndex, indicesArr });
+    console.log({ playRoundConfig });
 
     try {
       const data = await playRoundWriteAsync?.();
@@ -220,8 +238,11 @@ export default function PlayerComponent({
       return;
     }
 
+    console.log({ prePlayConfig });
+
     try {
       const data = await prePlayWriteAsync?.();
+      console.log("preplay round reqid ? ", { data });
       if (data?.hash) {
         toast.success(
           <div className="flex gap-2 justify-between">
@@ -291,10 +312,12 @@ export default function PlayerComponent({
         ? playRoundArgs.indicesArr?.filter((s) => s !== diceIndex)
         : playRoundArgs.indicesArr ?? [];
 
-      setPrePlayRoundArgs({ count: newIndicesArr.length.toString() });
+      setPrePlayRoundArgs({ count: (newIndicesArr.length + 1).toString() });
 
       setPlayRoundArgs((state) =>
-        state.indicesArr?.includes(diceIndex)
+        isFirstRoll
+          ? { indicesArr: [0, 1, 2, 3, 4], playerIndex: playerIndex }
+          : state.indicesArr?.includes(diceIndex)
           ? {
               indicesArr: [...newIndicesArr],
               playerIndex,
@@ -306,7 +329,9 @@ export default function PlayerComponent({
       );
 
       saveArgs({
-        indicesArr: newIndicesArr?.includes(diceIndex)
+        indicesArr: isFirstRoll
+          ? [0, 1, 2, 3, 4]
+          : newIndicesArr?.includes(diceIndex)
           ? [...newIndicesArr]
           : [...newIndicesArr, diceIndex],
         playerIndex: playerIndex,
@@ -426,7 +451,7 @@ export default function PlayerComponent({
                       {isChangeBetLoading ? "Adjusting Bet" : "Adjust Bet"}
                     </Button>
                     <Button onClick={callPrePlay}>
-                      {firstRoll
+                      {isFirstRoll
                         ? "First roll"
                         : (playRoundArgs.indicesArr ?? []).length == 0
                         ? "Select dice to roll"
@@ -436,6 +461,7 @@ export default function PlayerComponent({
                       {(playRoundArgs.indicesArr ?? []).length != 0 &&
                         ` - ${playRoundArgs.indicesArr?.toString()}`}
                     </Button>
+                    <Button onClick={callPlayRound}>Call Play Round</Button>
                   </div>
                 </div>
               </div>
