@@ -163,6 +163,29 @@ export const abi = [
   },
   {
     type: "function",
+    name: "getPlayerHand",
+    inputs: [
+      { name: "_playerIndex", type: "uint256", internalType: "uint256" },
+    ],
+    outputs: [{ name: "", type: "uint256[5]", internalType: "uint256[5]" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "getPlayerIndexForIndex",
+    inputs: [{ name: "playerIndex", type: "uint256", internalType: "uint256" }],
+    outputs: [{ name: "", type: "int256", internalType: "int256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "getPlayerRankForIndex",
+    inputs: [{ name: "playerIndex", type: "uint256", internalType: "uint256" }],
+    outputs: [{ name: "", type: "int256", internalType: "int256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
     name: "getRandomNumber",
     inputs: [],
     outputs: [{ name: "", type: "uint256", internalType: "uint256" }],

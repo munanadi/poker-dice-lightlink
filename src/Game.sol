@@ -193,6 +193,9 @@ contract Game is RrpRequesterV0 {
     uint256 private s_totalBets;
     /// index of winner, starts with -1 to indicate not picked
     int256 private s_winnerIndex = -1;
+    // player ranks and their indexes
+    int256[] private s_playerRanks;
+    int256[] private s_playerIndex;
 
     // TODO: Remove this constant value for a dynamic entry fee later
     uint256 public constant ENTRY_FEE = 0 ether;
@@ -211,6 +214,8 @@ contract Game is RrpRequesterV0 {
 
         for (uint256 i = 0; i < _numberOfPlayers; i++) {
             playerState[i] = Player({index: i, playerAddr: address(0), hand: startingHand, bet: 0, turn: 0});
+            s_playerRanks.push(-1);
+            s_playerIndex.push(-1);
         }
     }
 
@@ -346,6 +351,7 @@ contract Game is RrpRequesterV0 {
 
         // Store all player ranks here
         uint256[] memory playerRanks = new uint256[](s_totalNumberOfPlayers);
+        uint256[] memory playerIndex = new uint256[](s_totalNumberOfPlayers);
 
         // Loop through all the players and sort them on their hands
         for (uint256 i = 0; i < s_totalNumberOfPlayers; i++) {
@@ -353,14 +359,15 @@ contract Game is RrpRequesterV0 {
 
             // evaluvate a players hand
             Ranks finalRank = evaluvateHand(player.hand);
-            playerRanks[i] = uint256(finalRank);
+            s_playerRanks[i] = int256(uint256(finalRank));
+            s_playerIndex[i] = int256(i);
         }
 
         // Sort player ranks to find the winner, the one with max is the winner
         playerRanks.sort();
 
         // TODO: Returns max of one player, need to change this for ties
-        s_winnerIndex = int256(playerRanks[0]);
+        s_winnerIndex = int256(playerIndex[0]);
         return playerRanks[0];
     }
 
@@ -447,6 +454,13 @@ contract Game is RrpRequesterV0 {
         return playerState[_playerIndex];
     }
 
+    function getPlayerHand(uint256 _playerIndex) public view returns (uint256[5] memory) {
+        if (_playerIndex >= s_totalNumberOfPlayers) {
+            revert PlayerIndexNotExist(_playerIndex);
+        }
+        return playerState[_playerIndex].hand;
+    }
+
     function getGameState() public view returns (GameState) {
         return s_gameState;
     }
@@ -457,5 +471,13 @@ contract Game is RrpRequesterV0 {
 
     function getWinnerIndex() public view returns (int256) {
         return s_winnerIndex;
+    }
+
+    function getPlayerRankForIndex(uint256 playerIndex) public view returns (int256) {
+        return s_playerRanks[playerIndex];
+    }
+
+    function getPlayerIndexForIndex(uint256 playerIndex) public view returns (int256) {
+        return s_playerIndex[playerIndex];
     }
 }
