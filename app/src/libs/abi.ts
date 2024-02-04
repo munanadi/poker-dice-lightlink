@@ -191,6 +191,13 @@ export const abi = [
   },
   {
     type: "function",
+    name: "getWinnerIndex",
+    inputs: [],
+    outputs: [{ name: "", type: "int256", internalType: "int256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
     name: "joinGame",
     inputs: [],
     outputs: [],

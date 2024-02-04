@@ -191,6 +191,8 @@ contract Game is RrpRequesterV0 {
     GameState private s_gameState;
     /// Total value of bets
     uint256 private s_totalBets;
+    /// index of winner, starts with -1 to indicate not picked
+    int256 private s_winnerIndex = -1;
 
     // TODO: Remove this constant value for a dynamic entry fee later
     uint256 public constant ENTRY_FEE = 0 ether;
@@ -300,15 +302,20 @@ contract Game is RrpRequesterV0 {
     /// turns taken by the player
     function _updateGameState() internal {
         uint256 totalPlayersCount = s_totalNumberOfPlayers;
+        bool isPlayUnderWay = false;
 
         for (uint256 i = 0; i < totalPlayersCount; i++) {
-            if (playerState[i].turn >= 2) {
-                s_gameState = GameState.WaitingOnPlayerTurn;
+            if (playerState[i].turn < 2) {
+                isPlayUnderWay = true;
                 break;
             }
         }
 
-        s_gameState = GameState.FinishedRound;
+        if (isPlayUnderWay) {
+            s_gameState = GameState.WaitingOnPlayerTurn;
+        } else {
+            s_gameState = GameState.FinishedRound;
+        }
     }
 
     ///  @dev this function will take index and either to add or reduce the amount from their bets
@@ -353,6 +360,7 @@ contract Game is RrpRequesterV0 {
         playerRanks.sort();
 
         // TODO: Returns max of one player, need to change this for ties
+        s_winnerIndex = int256(playerRanks[0]);
         return playerRanks[0];
     }
 
@@ -445,5 +453,9 @@ contract Game is RrpRequesterV0 {
 
     function getTotalPrizePool() public view returns (uint256) {
         return s_totalBets;
+    }
+
+    function getWinnerIndex() public view returns (int256) {
+        return s_winnerIndex;
     }
 }
