@@ -15,7 +15,7 @@ export default function LandingPage() {
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900">
       <h1 className="text-4xl font-bold mb-4 dark:text-white">Dice Poker</h1>
 
-      <div className="m-2">Let's start playing</div>
+      <div className="m-2">Let&apos;s start playing</div>
 
       <div className="flex gap-2 p-3">
         <div className="animate-bounce">
