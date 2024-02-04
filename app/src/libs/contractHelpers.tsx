@@ -10,11 +10,15 @@ import { parseEther } from "viem";
 import { abi } from "@/libs/abi";
 import { isAddress } from "ethers/lib/utils";
 
-export const useJoinGame = (contractAdd: `0x${string}`) => {
+export const useJoinGame = (
+  contractAdd: `0x${string}`,
+  isGameAtCapacity: boolean,
+) => {
   const { config, error, isError } = usePrepareContractWrite({
     address: contractAdd,
     abi: abi,
     functionName: "joinGame",
+    // enabled: isGameAtCapacity ? false : true,
   });
 
   const { data, writeAsync } = useContractWrite(config);

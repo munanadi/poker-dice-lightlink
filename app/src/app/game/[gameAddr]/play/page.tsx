@@ -4,15 +4,20 @@ import { userPlayerDetailsStore } from "@/store/usePlayerDetailsStore";
 import PlayerComponent from "@/components/PlayerComponent";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ArrowLeftIcon, MoveLeft } from "lucide-react";
+import { ArrowLeftIcon } from "lucide-react";
 import {
   useGameStateReads,
   useGetAllPlayerDetails,
 } from "@/libs/contractHelpers";
 import { useEffect } from "react";
+import { Separator } from "@/components/ui/separator";
+import { useContractWrite } from "wagmi";
+import { abi } from "@/libs/abi";
+import { toast } from "sonner";
+import { fetchExplorerLink } from "@/libs/utils";
 
 export default function PlayGamesss() {
-  const { replace } = useRouter();
+  const { replace, push } = useRouter();
   const pathName = usePathname();
   const gameAddr = pathName.split("/")?.[2] as `0x${string}`;
 
@@ -20,12 +25,23 @@ export default function PlayGamesss() {
   const { players: playersFromStore } = userPlayerDetailsStore();
 
   const setPlayers = userPlayerDetailsStore((state) => state.setPlayers);
-  const { totalCountOfPlayers } = useGameStateReads(gameAddr);
+  const { totalCountOfPlayers, gameState } = useGameStateReads(gameAddr);
 
   const { allPlayerDetails, error } = useGetAllPlayerDetails(
     gameAddr,
     parseInt(totalCountOfPlayers?.toString() || "0"),
   );
+
+  const {
+    data: pickWinnerData,
+    error: pickWinnerError,
+    isError: isPickWinnerError,
+    writeAsync: pickWinnerWrite,
+  } = useContractWrite({
+    address: gameAddr,
+    abi,
+    functionName: "pickWinner",
+  });
 
   const playerDetails = error == "no players yet" ? [] : allPlayerDetails;
 
@@ -51,6 +67,38 @@ export default function PlayGamesss() {
     playersFromStore ?? nonZeroPlayers.length != 0
       ? nonZeroPlayers?.map((d: any) => d?.result as any)
       : [];
+
+  const pickWinner = async () => {
+    let data;
+    try {
+      data = await pickWinnerWrite?.();
+
+      if (data?.hash) {
+        toast.success(
+          <div className="flex gap-2 justify-between">
+            <div className="font-bold">Picking Winner</div>
+            <div className="text-sm text-slate-500 dark:text-slate-400 underline">
+              <a target="_blank" href={fetchExplorerLink(data?.hash!, "tx")}>
+                Explore Txn
+              </a>
+            </div>
+          </div>,
+        );
+
+        // navigate to /winner here
+        push(`/game/${gameAddr}/winner`);
+      } else {
+        console.log(data);
+        toast.error("something went wrong while playing round");
+      }
+    } catch (e) {
+      console.log(e);
+      return;
+    }
+  };
+
+  const isGameOver = parseInt(gameState ?? "-1") == 3;
+  console.log({ isGameOver, gameState });
 
   return (
     <div className="flex flex-col items-center justify-start min-h-screen bg-gray-100 dark:bg-gray-900">
@@ -83,7 +131,22 @@ export default function PlayGamesss() {
               })}
           </main>
         )}
+        {isGameOver && (
+          <>
+            <Separator />
+            <Separator />
+            <Separator />
+            <div className="flex flex-col gap-5 items-center justify-around mt-10">
+              <div>Game is Over!</div>
+              <Button onClick={pickWinner}>Pick Winner</Button>
+            </div>
+          </>
+        )}
       </div>
+      {/* Prepare Error */}
+      {(isPickWinnerError || pickWinnerError) && (
+        <div>Error: {(pickWinnerError || pickWinnerError)?.message}</div>
+      )}
     </div>
   );
 }

@@ -39,7 +39,9 @@ export default function PlayerComponent({
 
   const [toAdd, setToAdd] = useState<boolean>(false);
 
-  const [requestArrArgs, setRequestArrArgs] = useState<`0x${string}`>("0x");
+  const [requestArrArgs, setRequestArrArgs] = useState<`0x${string}`>(
+    `0x65b6cDf104F9E0bf87de21C06b2dD77366cD2AfD0x65b6cDf104F9E0bf87de2C`,
+  );
 
   const [prePlayRoundArgs, setPrePlayRoundArgs] = useState<{
     count: string | undefined;
@@ -156,7 +158,6 @@ export default function PlayerComponent({
   (indicesArr ?? []).forEach(
     (d: string) => (newIndicesArr[parseInt(d)] = true),
   );
-  console.log({ newIndicesArr });
 
   const {
     config: playRoundConfig,
@@ -172,6 +173,7 @@ export default function PlayerComponent({
       // [true, true, true, true, true],
       isFirstRoll ? [true, true, true, true, true] : (newIndicesArr as any),
     ],
+    enabled: parseInt(turn ?? "-1") == 2 ? false : true,
   });
 
   const { data: playRoundData, writeAsync: playRoundWriteAsync } =
@@ -190,6 +192,7 @@ export default function PlayerComponent({
     address: gameAddr,
     functionName: "expectingRequestWithIdToBeFulfilled",
     args: [requestArrArgs],
+    enabled: false,
   });
 
   const callPlayRound = async () => {
