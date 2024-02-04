@@ -77,31 +77,31 @@ export default function PlayerComponent({
   const gameAddr =
     useGameStateStore((state) => state.gameAddress) ?? gameAddrFromPathName;
 
-  // const unWatchReq = useContractEvent({
-  //   address: gameAddr,
-  //   abi: abi,
-  //   eventName: "RequestedUint256Array",
-  //   listener(log) {
-  //     const receivedReqId = log[0].args.requestId ?? "";
-  //     console.log(`fired request : ${receivedReqId}`);
-  //     toast.info(`fired request : ${receivedReqId}`);
-  //     unWatchReq?.();
-  //   },
-  // });
+  const unWatchReq = useContractEvent({
+    address: gameAddr,
+    abi: abi,
+    eventName: "RequestedUint256Array",
+    listener(log) {
+      const receivedReqId = log[0].args.requestId ?? "";
+      console.log(`fired request : ${receivedReqId}`);
+      toast.info(`fired request : ${receivedReqId}`);
+      unWatchReq?.();
+    },
+  });
 
-  // const unWatchReceived = useContractEvent({
-  //   address: gameAddr,
-  //   abi: abi,
-  //   eventName: "ReceivedUint256Array",
-  //   listener(log) {
-  //     const receivedReqId = log[0].args.requestId ?? "";
-  //     console.log(`${receivedReqId} req is fulfilled`);
-  //     toast.info(`${receivedReqId} req is fulfilled`);
-  //     // Call the actual play round here.
-  //     // callPlayRound();
-  //     unWatchReceived?.();
-  //   },
-  // });
+  const unWatchReceived = useContractEvent({
+    address: gameAddr,
+    abi: abi,
+    eventName: "ReceivedUint256Array",
+    listener(log) {
+      const receivedReqId = log[0].args.requestId ?? "";
+      console.log(`${receivedReqId} req is fulfilled`);
+      toast.info(`${receivedReqId} req is fulfilled`);
+      // Call the actual play round here.
+      unWatchReceived?.();
+      // callPlayRound();
+    },
+  });
 
   const {
     config: changeBetConfig,
@@ -342,6 +342,12 @@ export default function PlayerComponent({
     }
   };
 
+  const playRoundErrorMessage =
+    playRoundError &&
+    (playRoundError?.message ?? "").match(/reason:\s*([\s\S]*?)\n/)?.[1];
+
+  const isRandArrayNotSet = playRoundErrorMessage == "random array not set";
+
   return (
     <>
       <div
@@ -464,7 +470,7 @@ export default function PlayerComponent({
                       {(playRoundArgs.indicesArr ?? []).length != 0 &&
                         ` - ${playRoundArgs.indicesArr?.toString()}`}
                     </Button>
-                    <Button onClick={callPlayRound}>Call Play Round</Button>
+                    <Button disabled={isRandArrayNotSet} onClick={callPlayRound}>Call Play Round</Button>
                   </div>
                 </div>
               </div>
@@ -479,7 +485,7 @@ export default function PlayerComponent({
         {(isPrePlayError || prePlayError) && (
           <div>Error: {(prePlayError || prePlayError)?.message}</div>
         )}
-        {(isPlayRoundError || playRoundError) && parseInt(turn) != 2 && (
+        {(isPlayRoundError || playRoundError) && parseInt(turn) != 2 && !isRandArrayNotSet && (
           <div>Error: {(playRoundError || playRoundError)?.message}</div>
         )}
       </div>

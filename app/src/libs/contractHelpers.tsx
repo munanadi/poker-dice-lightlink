@@ -18,7 +18,7 @@ export const useJoinGame = (
     address: contractAdd,
     abi: abi,
     functionName: "joinGame",
-    // enabled: isGameAtCapacity ? false : true,
+    enabled: isGameAtCapacity ? false : true,
   });
 
   const { data, writeAsync } = useContractWrite(config);
@@ -106,6 +106,12 @@ export const useGameStateReads = (contractAdd: `0x${string}`) => {
         functionName: "getTotalPrizePool",
       },
     ],
+    enabled:
+      contractAdd == "0x" ||
+      contractAdd == ("" as string) ||
+      !isAddress(contractAdd)
+        ? false
+        : true,
   });
 
   if (

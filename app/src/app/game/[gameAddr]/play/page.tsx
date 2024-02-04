@@ -25,7 +25,8 @@ export default function PlayGamesss() {
   const { players: playersFromStore } = userPlayerDetailsStore();
 
   const setPlayers = userPlayerDetailsStore((state) => state.setPlayers);
-  const { totalCountOfPlayers, gameState } = useGameStateReads(gameAddr);
+  const { totalCountOfPlayers, gameState, currentCountOfPlayers } =
+    useGameStateReads(gameAddr);
 
   const { allPlayerDetails, error } = useGetAllPlayerDetails(
     gameAddr,
@@ -98,11 +99,17 @@ export default function PlayGamesss() {
   };
 
   const isGameOver = parseInt(gameState ?? "-1") == 3;
-  console.log({ isGameOver, gameState });
+
+  const isWaitingOnOtherPlayers =
+    parseInt(currentCountOfPlayers ?? "-1") <
+    parseInt(totalCountOfPlayers ?? "-1");
 
   return (
     <div className="flex flex-col items-center justify-start min-h-screen bg-gray-100 dark:bg-gray-900">
       <div className="container">
+        <Button variant={"link"} onClick={goBack}>
+          <ArrowLeftIcon className="mt-4" />
+        </Button>
         {!players || players.length == 0 ? (
           <div className="flex justify-start">
             <Button size="icon" variant="outline" onClick={goBack}>
@@ -139,6 +146,16 @@ export default function PlayGamesss() {
             <div className="flex flex-col gap-5 items-center justify-around mt-10">
               <div>Game is Over!</div>
               <Button onClick={pickWinner}>Pick Winner</Button>
+            </div>
+          </>
+        )}
+        {isWaitingOnOtherPlayers && (
+          <>
+            <Separator />
+            <Separator />
+            <Separator />
+            <div className="flex flex-col gap-5 items-center justify-around mt-10">
+              <div>Waiting on other players...</div>
             </div>
           </>
         )}

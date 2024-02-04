@@ -35,6 +35,40 @@ export function gameStateToString(
   }
 }
 
+export function rankToString(state: number | undefined): string {
+  switch (state) {
+    // FiveOfAKind,
+    case 0:
+      return "Five of a kind";
+
+    // FourOfAKind,
+    case 1:
+      return "Four of a kind";
+    // FullHouse,
+    case 2:
+      return "Full house";
+
+    // Straight,
+    case 3:
+      return "Straight";
+
+    // ThreeOfAKind,
+    case 4:
+      return "Three of a kind";
+    // TwoPair,
+    case 5:
+      return "Two pair";
+    // Pair,
+    case 6:
+      "Pair";
+    // Bust
+    case 7:
+      return "Bust";
+    default:
+      return "undefined";
+  }
+}
+
 export function diceFaceToString(state: number | undefined): JSX.Element {
   switch (state) {
     // Ace,
