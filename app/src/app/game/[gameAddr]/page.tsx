@@ -39,15 +39,6 @@ export default function JoinGame({ params }: { params: { gameAddr: string } }) {
   const { setPlayers } = userPlayerDetailsStore();
 
   const {
-    callJoinData,
-    callJoinGame,
-    callJoinGameLoading,
-    callJoinGameSuccess,
-    callJoinIsPrepareError,
-    callJoinPrepareError,
-  } = useJoinGame(gameAddr);
-
-  const {
     currentCountOfPlayers,
     error: gameStateError,
     gameState,
@@ -55,16 +46,25 @@ export default function JoinGame({ params }: { params: { gameAddr: string } }) {
     totalCountOfPlayers,
   } = useGameStateReads(gameAddr);
 
+  const isGameAtCapacity =
+    parseInt(currentCountOfPlayers ?? "0") ==
+    parseInt(totalCountOfPlayers ?? "1");
+
+  const {
+    callJoinData,
+    callJoinGame,
+    callJoinGameLoading,
+    callJoinGameSuccess,
+    callJoinIsPrepareError,
+    callJoinPrepareError,
+  } = useJoinGame(gameAddr, isGameAtCapacity);
+
   const { allPlayerDetails, error } = useGetAllPlayerDetails(
     gameAddr,
     parseInt(totalCountOfPlayers?.toString() || "0"),
   );
 
   const playerDetails = error == "no players yet" ? [] : allPlayerDetails;
-
-  const isGameAtCapacity =
-    parseInt(currentCountOfPlayers ?? "0") ==
-    parseInt(totalCountOfPlayers ?? "1");
 
   // If this is -1, the current account is not playing this game
   const isCurrentAdressInGame =
@@ -166,9 +166,8 @@ export default function JoinGame({ params }: { params: { gameAddr: string } }) {
                     <div>{totalCountOfPlayers?.toString()}</div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {/* TODO: Fetch this */}
                     <div className="font-semibold">Total bet:</div>
-                    <div>{0}</div>
+                    <div>{getTotalPrizePool?.toString()}</div>
                   </div>
                   <div className="flex items-center gap-2">
                     {/* TODO: Fetch this */}
@@ -244,11 +243,12 @@ export default function JoinGame({ params }: { params: { gameAddr: string } }) {
       </main>
 
       {/* Prepare Error */}
-      {(callJoinIsPrepareError || callJoinPrepareError) && (
-        <div>
-          Error: {(callJoinPrepareError || callJoinPrepareError)?.message}
-        </div>
-      )}
+      {(callJoinIsPrepareError || callJoinPrepareError) &&
+        !isGameAtCapacity && (
+          <div>
+            Error: {(callJoinPrepareError || callJoinPrepareError)?.message}
+          </div>
+        )}
     </div>
   );
 }
