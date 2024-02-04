@@ -10,8 +10,8 @@ async function main() {
   const airnodeXpub =
     "xpub6CuDdF9zdWTRuGybJPuZUGnU4suZowMmgu15bjFZT2o6PUtk4Lo78KGJUGBobz3pPKRaN9sLxzj21CMe6StP3zUsd8tWEJPgZBesYBMY7Wo";
   const yourDeployedContractAddress =
-    "0x7b0488ca18d75b9D41941B113B53b7698D6A7225";
-  const amountInEther = 0.1;
+    "0x12604B67156993276e54fEb5c4a71D67B8d2C2e1";
+  const amountInEther = 0.01;
 
   // Connect to a provider (e.g., Infura, Alchemy)
   const provider = new ethers.JsonRpcProvider(process.env.PROVIDER_URL);

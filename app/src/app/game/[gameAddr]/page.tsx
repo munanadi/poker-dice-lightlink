@@ -48,16 +48,8 @@ export default function JoinGame({ params }: { params: { gameAddr: string } }) {
 
   const isGameAtCapacity =
     parseInt(currentCountOfPlayers ?? "0") ==
-    parseInt(totalCountOfPlayers ?? "1");
-
-  const {
-    callJoinData,
-    callJoinGame,
-    callJoinGameLoading,
-    callJoinGameSuccess,
-    callJoinIsPrepareError,
-    callJoinPrepareError,
-  } = useJoinGame(gameAddr, isGameAtCapacity);
+      parseInt(totalCountOfPlayers ?? "1") &&
+    parseInt(currentCountOfPlayers ?? "0") != 0;
 
   const { allPlayerDetails, error } = useGetAllPlayerDetails(
     gameAddr,
@@ -71,6 +63,15 @@ export default function JoinGame({ params }: { params: { gameAddr: string } }) {
     (playerDetails ?? []).findIndex(
       (player) => (player?.result as any)?.playerAddr == address,
     ) != -1;
+
+  const {
+    callJoinData,
+    callJoinGame,
+    callJoinGameLoading,
+    callJoinGameSuccess,
+    callJoinIsPrepareError,
+    callJoinPrepareError,
+  } = useJoinGame(gameAddr, isGameAtCapacity, isCurrentAdressInGame);
 
   useEffect(() => {
     const nonZeroPlayers = (playerDetails ?? [])?.filter(

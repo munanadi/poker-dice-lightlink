@@ -10,7 +10,7 @@ import {
 import "@rainbow-me/rainbowkit/styles.css";
 import { WagmiConfig, configureChains, createConfig, Chain } from "wagmi";
 import { publicProvider } from "wagmi/providers/public";
-import { polygonMumbai } from "viem/chains";
+import { foundry, polygonMumbai } from "viem/chains";
 import NavBar from "@/components/NavBar";
 import { alchemyProvider } from "wagmi/providers/alchemy";
 import { jsonRpcProvider } from "wagmi/providers/jsonRpc";
@@ -54,8 +54,8 @@ export default function Wrapper({ children }: any) {
         polygonMumbai,
         ...(process.env.NEXT_PUBLIC_ENABLE_TESTNETS === "true" ? [] : []),
       ],
-      [ publicProvider(),
-        alchemyProvider({ apiKey: "" }),
+      [
+        publicProvider(),
         jsonRpcProvider({
           rpc: (pegasus) => ({
             http: "https://replicator.pegasus.lightlink.io/rpc/v1",

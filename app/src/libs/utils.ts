@@ -101,9 +101,9 @@ export const shortenAddressLink = (address: string): string => {
 export function fetchExplorerLink(entity: string, type: "add" | "tx"): string {
   switch (type) {
     case "add":
-      return `https://mumbai.polygonscan.com/address/${entity}`;
+      return `https://pegasus.lightlink.io/address/${entity}`;
     case "tx":
-      return `https://mumbai.polygonscan.com/tx/${entity}`;
+      return `https://pegasus.lightlink.io/tx/${entity}`;
     default:
       return "";
   }

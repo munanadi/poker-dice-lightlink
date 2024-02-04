@@ -13,12 +13,13 @@ import { isAddress } from "ethers/lib/utils";
 export const useJoinGame = (
   contractAdd: `0x${string}`,
   isGameAtCapacity: boolean,
+  isCurrentAdressInGame: boolean,
 ) => {
   const { config, error, isError } = usePrepareContractWrite({
     address: contractAdd,
     abi: abi,
     functionName: "joinGame",
-    enabled: isGameAtCapacity ? false : true,
+    enabled: isGameAtCapacity && isCurrentAdressInGame ? false : true,
   });
 
   const { data, writeAsync } = useContractWrite(config);
