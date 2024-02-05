@@ -6,6 +6,13 @@ This is a game of poker dice that is being played on chain.
 
 ---
 
+### DEMO
+
+Check out the demo [here](https://www.youtube.com/watch?v=NSGD9T6Cx-8)
+
+
+---
+
 1. A player should be able to invoke the contract with the number of players.
    - Add a min bet fee that is required.
 2. Any player should be able to join the game witht he contract address.
