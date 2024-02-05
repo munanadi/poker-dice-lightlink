@@ -121,7 +121,7 @@ export default function WinnerPage() {
           </div>
 
           {/* Prepare Error */}
-          {(isError || error) && <div>Error: {(error || error)?.message}</div>}
+          {/* {(isError || error) && <div>Error: {(error || error)?.message}</div>} */}
         </div>
       </div>
     </>

@@ -479,7 +479,7 @@ export default function PlayerComponent({
         ) : (
           <div className="text-2xl text-bold">Your turns are over</div>
         )}
-        {(isChangeBetError || changeBetError) && (
+        {/* {(isChangeBetError || changeBetError) && (
           <div>Error: {(changeBetError || changeBetError)?.message}</div>
         )}
         {(isPrePlayError || prePlayError) && (
@@ -487,7 +487,7 @@ export default function PlayerComponent({
         )}
         {(isPlayRoundError || playRoundError) && parseInt(turn) != 2 && !isRandArrayNotSet && (
           <div>Error: {(playRoundError || playRoundError)?.message}</div>
-        )}
+        )} */}
       </div>
     </>
   );

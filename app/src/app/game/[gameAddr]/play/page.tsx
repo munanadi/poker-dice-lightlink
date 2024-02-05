@@ -161,9 +161,9 @@ export default function PlayGamesss() {
         )}
       </div>
       {/* Prepare Error */}
-      {(isPickWinnerError || pickWinnerError) && (
+      {/* {(isPickWinnerError || pickWinnerError) && (
         <div>Error: {(pickWinnerError || pickWinnerError)?.message}</div>
-      )}
+      )} */}
     </div>
   );
 }
